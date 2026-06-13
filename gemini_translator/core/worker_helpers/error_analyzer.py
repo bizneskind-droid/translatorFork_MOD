@@ -17,7 +17,7 @@ from gemini_translator.api.errors import (
 
 class ErrorAnalyzer:
     INFINITE_RETRY_PACKAGE_TYPES = {'epub_batch', 'glossary_batch_task'}
-    TERMINAL_PACKAGE_ERRORS = {ErrorType.CONTENT_FILTER, ErrorType.API_ERROR, ErrorType.VALIDATION}
+    TERMINAL_PACKAGE_ERRORS = {ErrorType.API_ERROR, ErrorType.VALIDATION}
     
     # --- Конфигурация правил отказов ---
     FAILURE_RULES = {
