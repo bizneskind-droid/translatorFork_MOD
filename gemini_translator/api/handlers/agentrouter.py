@@ -177,9 +177,12 @@ class AgentRouterApiHandler(BaseApiHandler):
                             choices = chunk.get("choices") or []
                             if not choices:
                                 continue
-                            delta = choices[0].get("delta") or {}
+                            choice = choices[0]
+                            if choice is None:
+                                continue
+                            delta = choice.get("delta") or {}
                             collected_text += delta.get("content") or ""
-                            reason = choices[0].get("finish_reason")
+                            reason = choice.get("finish_reason")
                             if reason:
                                 finish_reason = reason
 
