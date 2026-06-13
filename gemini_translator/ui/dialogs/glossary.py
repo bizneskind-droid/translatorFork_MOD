@@ -662,7 +662,7 @@ class MainWindow(QDialog):
         # self.table.setSortingEnabled(True)  <-- ЭТУ СТРОКУ УДАЛИТЬ ИЛИ ЗАКОММЕНТИРОВАТЬ
         
         self.table.itemChanged.connect(self.on_main_table_item_changed)
-        # delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)  # DEBUG: отключено для диагностики segfault
+        delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)
         splitter.addWidget(self.table)
         
         history_widget = QWidget(); history_layout = QVBoxLayout(history_widget)
@@ -1030,6 +1030,12 @@ class MainWindow(QDialog):
         for col, item in enumerate(items):
             self.table.setItem(row, col, item)
         self._create_row_buttons(row, entry_data)
+        # Защита от segfault: колонки с cellWidget должны иметь нередактируемый
+        # QTableWidgetItem, иначе двойной клик на них крашит PyQt6
+        for col in (3, 4):
+            placeholder = QTableWidgetItem()
+            placeholder.setFlags(placeholder.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(row, col, placeholder)
 
 
     def _update_analysis_widgets(self):
