@@ -2577,8 +2577,9 @@ class MainWindow(QDialog):
                 flags = item.flags()
                 if not (flags & Qt.ItemFlag.ItemIsEditable):
                     return True
-                # Открываем редактор вручную через persistent editor
-                self.table.editItem(item)
+                # Открываем редактор через setCurrentCell + edit
+                self.table.setCurrentCell(row, col)
+                self.table.edit(self.table.currentIndex())
                 return True
         return super().eventFilter(obj, event)
 
