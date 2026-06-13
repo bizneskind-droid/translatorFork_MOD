@@ -2572,6 +2572,8 @@ class MainWindow(QDialog):
                 widget = self.table.cellWidget(row, col)
                 print(f"[DBLCLICK] row={row} col={col} item={item} cellWidget={widget}")
                 import sys; sys.stdout.flush()
+                # DEBUG: блокируем открытие редактора чтобы проверить - краш в делегате или нет
+                return True
         return super().eventFilter(obj, event)
 
     def on_main_table_item_changed(self, item: QTableWidgetItem):
