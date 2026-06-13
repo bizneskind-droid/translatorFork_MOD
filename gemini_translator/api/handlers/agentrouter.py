@@ -126,7 +126,10 @@ class AgentRouterApiHandler(BaseApiHandler):
                             err_code = err_json.get("error", {}).get("code", "")
                         except Exception:
                             err_code = ""
+                        sys_instr = self.worker.prompt_builder.system_instruction or ""
                         print(f"[AGENTROUTER DEBUG] HTTP 400 response: code={err_code!r} body={error_text[:500]!r}")
+                        print(f"[AGENTROUTER DEBUG] system_instruction[:300]={sys_instr[:300]!r}")
+                        print(f"[AGENTROUTER DEBUG] prompt[:500]={prompt[:500]!r}")
                         if "content-blocked" in err_code or "content-blocked" in error_text:
                             raise ContentFilterError(
                                 f"AgentRouter заблокировал контент (content-blocked). "
