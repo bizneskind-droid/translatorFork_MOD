@@ -4,27 +4,26 @@ from PyQt6.QtWidgets import QSizePolicy, QTableWidget
 from PyQt6.QtCore import Qt, pyqtSignal
 
 
-class ExpandingTextEdit(QtWidgets.QTextEdit):
+class ExpandingTextEdit(QtWidgets.QPlainTextEdit):
+    """QPlainTextEdit вместо QTextEdit — стабильно работает в делегатах PyQt6."""
     geometryChangeRequested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        # Откладываем сигнал через QTimer чтобы не триггерить resizeRowToContents
-        # синхронно во время инициализации делегата — это приводит к segfault в PyQt6
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.textChanged.connect(lambda: QtCore.QTimer.singleShot(0, self.geometryChangeRequested.emit))
 
     def sizeHint(self):
         doc = self.document()
-        vp = self.viewport()
-        width = vp.width() if vp is not None and vp.width() > 0 else 200
-        doc.setTextWidth(width)
-        return QtCore.QSize(self.width(), int(doc.size().height()) + 5)
+        doc.setTextWidth(max(self.width(), 1))
+        height = int(doc.size().height()) + 8
+        return QtCore.QSize(self.width(), height)
 
     def resizeEvent(self, event: QtGui.QResizeEvent):
         super().resizeEvent(event)
-        self.updateGeometry()
-        # Отложенный сигнал — не синхронный, не вызовет crash во время resize
+        QtCore.QTimer.singleShot(0, self.updateGeometry)
         QtCore.QTimer.singleShot(0, self.geometryChangeRequested.emit)
 
 
@@ -90,13 +89,11 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
         return super().eventFilter(editor, event)
 
 
-
 class SmartTextEdit(ExpandingTextEdit):
     """
     "Умный" редактор, который автоматически сохраняет свои изменения
     при потере фокуса. Он знает, какой термин и какое поле он редактирует.
     """
-    # Сигнал: (идентификатор_термина, имя_поля, новый_текст)
     data_committed = pyqtSignal(object, str, str)
 
     def __init__(self, identifier, field_name, initial_text, parent=None):
@@ -107,22 +104,15 @@ class SmartTextEdit(ExpandingTextEdit):
         self.setPlaceholderText(f"Введите {field_name}…")
 
     def focusOutEvent(self, event: QtGui.QFocusEvent):
-        """Вызывается, когда виджет теряет фокус."""
         super().focusOutEvent(event)
-        # Это главный триггер: при потере фокуса сообщаем о новом значении.
         self.data_committed.emit(self.identifier, self.field_name, self.toPlainText())
 
     def keyPressEvent(self, event: QtGui.QKeyEvent):
-        """Обрабатываем нажатие Enter для удобства."""
-        # Если нажат Enter без Shift, считаем ввод завершенным
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) \
            and not (event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
-            # Убираем фокус, что автоматически вызовет focusOutEvent и сохранение
             self.clearFocus()
         else:
-            # В остальных случаях обрабатываем нажатие как обычно
             super().keyPressEvent(event)
-
 
 
 class SingleRowTableWidget(QTableWidget):
@@ -134,36 +124,19 @@ class SingleRowTableWidget(QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setRowCount(1)
-        
-        # --- ИЗМЕНЕНИЕ 1: Более строгая политика ---
-        # Policy.Fixed говорит: "Моя высота - это ТОЧНО мой sizeHint. Не растягивать!"
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        # Подключаемся к сигналу изменения размера хедера, чтобы реагировать на перенос слов
         self.horizontalHeader().sectionResized.connect(lambda: self.resizeRowToContents(0))
 
-
     def sizeHint(self) -> QtCore.QSize:
-        """Переопределяем, чтобы сообщить идеальный размер."""
         total_height = 0
         if self.horizontalHeader().isVisible():
             total_height += self.horizontalHeader().height()
-        
         if self.rowCount() > 0:
-            # Учитываем высоту строки, которую установил делегат
             total_height += self.rowHeight(0)
-        
         total_height += self.frameWidth() * 2
-
         return QtCore.QSize(super().sizeHint().width(), total_height)
 
-    # --- ИЗМЕНЕНИЕ 2: "Недостающее звено" ---
     def resizeRowToContents(self, row: int):
-        """
-        Переопределяем стандартный метод. Сначала выполняем стандартное действие,
-        а затем принудительно сообщаем компоновщику, что наш общий размер изменился.
-        """
         super().resizeRowToContents(row)
-        # Вот он, ключевой вызов!
         self.updateGeometry()
