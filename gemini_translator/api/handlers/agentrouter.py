@@ -95,6 +95,10 @@ class AgentRouterApiHandler(BaseApiHandler):
                 self.worker.model_config.get("max_output_tokens", 8192) * 0.98
             )
 
+        # Отключаем extended thinking — AgentRouter может включать его автоматически
+        # для Claude, но для перевода он не нужен и съедает все токены до ответа.
+        payload["thinking"] = {"type": "disabled"}
+
         self._debug_record_request(
             {
                 "method": "POST",
@@ -216,6 +220,12 @@ class AgentRouterApiHandler(BaseApiHandler):
 
                     if not collected_text:
                         print(f"[AGENTROUTER DEBUG] empty response: finish_reason={finish_reason!r}")
+                        if finish_reason == "max_tokens":
+                            raise PartialGenerationError(
+                                f"AgentRouter: модель исчерпала токены в фазе reasoning, контент не получен.",
+                                partial_text="",
+                                reason="LENGTH",
+                            )
                         raise ValidationFailedError(
                             f"AgentRouter вернул пустой ответ. finish_reason={finish_reason!r}"
                         )
