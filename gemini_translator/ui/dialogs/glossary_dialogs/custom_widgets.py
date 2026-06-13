@@ -57,9 +57,19 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
 
     def setEditorData(self, editor, index):
         print(f"[DELEGATE] setEditorData row={index.row()} col={index.column()}")
-        value = index.model().data(index, QtCore.Qt.ItemDataRole.EditRole)
-        editor.setPlainText(str(value))
-        editor.updateGeometry()
+        # Блокируем сигналы модели пока устанавливаем данные в редактор —
+        # иначе setPlainText триггерит itemChanged → _run_full_analysis →
+        # перестройка таблицы пока редактор ещё открывается → segfault
+        table = self.parent()
+        if isinstance(table, QtWidgets.QTableWidget):
+            table.blockSignals(True)
+        try:
+            value = index.model().data(index, QtCore.Qt.ItemDataRole.EditRole)
+            editor.setPlainText(str(value) if value is not None else "")
+            editor.updateGeometry()
+        finally:
+            if isinstance(table, QtWidgets.QTableWidget):
+                table.blockSignals(False)
         print(f"[DELEGATE] setEditorData done")
 
     def setModelData(self, editor, model, index):
