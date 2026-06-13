@@ -177,6 +177,8 @@ class AgentRouterApiHandler(BaseApiHandler):
                                 chunk = json.loads(data_str)
                             except json.JSONDecodeError:
                                 continue
+                            if chunk is None:
+                                continue
 
                             choices = chunk.get("choices") or []
                             if not choices:
