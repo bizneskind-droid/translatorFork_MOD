@@ -662,7 +662,7 @@ class MainWindow(QDialog):
         # self.table.setSortingEnabled(True)  <-- ЭТУ СТРОКУ УДАЛИТЬ ИЛИ ЗАКОММЕНТИРОВАТЬ
         
         self.table.itemChanged.connect(self.on_main_table_item_changed)
-        delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)
+        # delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)
         self.table.viewport().installEventFilter(self)
         splitter.addWidget(self.table)
         
