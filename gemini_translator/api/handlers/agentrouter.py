@@ -119,6 +119,19 @@ class AgentRouterApiHandler(BaseApiHandler):
                         extra={"http_status": response.status, "mode": "error"},
                     )
 
+                    if response.status == 400:
+                        # Пробуем распарсить тело ошибки
+                        try:
+                            err_json = json.loads(error_text)
+                            err_code = err_json.get("error", {}).get("code", "")
+                        except Exception:
+                            err_code = ""
+                        if "content-blocked" in err_code or "content-blocked" in error_text:
+                            raise ContentFilterError(
+                                f"AgentRouter заблокировал контент (content-blocked). "
+                                f"Попробуйте другую модель или измените промпт."
+                            )
+                        raise NetworkError(f"Неверный запрос (400): {error_text[:200]}")
                     if response.status in [401, 403]:
                         raise RateLimitExceededError(
                             f"Ошибка доступа ({response.status}): {error_text[:150]}"
