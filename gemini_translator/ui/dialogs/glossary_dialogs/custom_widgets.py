@@ -42,13 +42,11 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
     Использует сигналы от редактора для идеальной синхронизации высоты строки.
     """
     def createEditor(self, parent, option, index):
+        print(f"[DELEGATE] createEditor row={index.row()} col={index.column()}")
         editor = ExpandingTextEdit(parent)
         table = self.parent()
         if isinstance(table, QtWidgets.QTableWidget):
             row = index.row()
-            # Используем weakref чтобы не держать живую ссылку на таблицу —
-            # при втором двойном клике старый editor может стрельнуть сигнал
-            # в момент когда C++ объект таблицы уже в недействительном состоянии.
             table_ref = weakref.ref(table)
             def _resize_row():
                 tbl = table_ref()
@@ -57,19 +55,18 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
             editor.geometryChangeRequested.connect(_resize_row)
 
         editor.installEventFilter(self)
+        print(f"[DELEGATE] createEditor done")
         return editor
 
     def setEditorData(self, editor, index):
+        print(f"[DELEGATE] setEditorData row={index.row()} col={index.column()}")
         value = index.model().data(index, QtCore.Qt.ItemDataRole.EditRole)
         editor.setPlainText(str(value))
-        
-        # --- ФИНАЛЬНЫЙ ТРЮК ДЛЯ ИДЕАЛЬНОГО ПЕРВОГО ОТКРЫТИЯ ---
-        # Сразу после установки данных, мы принудительно вызываем
-        # обновление геометрии редактора. Это заставит его
-        # испустить сигнал geometryChangeRequested, который мы только что подключили.
         editor.updateGeometry()
+        print(f"[DELEGATE] setEditorData done")
 
     def setModelData(self, editor, model, index):
+        print(f"[DELEGATE] setModelData row={index.row()} col={index.column()}")
         value = editor.toPlainText()
         model.setData(index, value, QtCore.Qt.ItemDataRole.EditRole)
         
@@ -77,13 +74,12 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
         if isinstance(table, QtWidgets.QTableWidget):
             table_ref = weakref.ref(table)
             row = index.row()
-            
-            # Отложенный вызов для финальной установки статической высоты
             QtCore.QTimer.singleShot(0, lambda: (
-                (tbl := table_ref()) and 
-                (0 <= row < tbl.rowCount()) and 
+                (tbl := table_ref()) and
+                (0 <= row < tbl.rowCount()) and
                 tbl.resizeRowToContents(row)
             ))
+        print(f"[DELEGATE] setModelData done")
 
     def sizeHint(self, option, index):
         text = index.model().data(index, QtCore.Qt.ItemDataRole.DisplayRole)
