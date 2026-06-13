@@ -662,8 +662,7 @@ class MainWindow(QDialog):
         # self.table.setSortingEnabled(True)  <-- ЭТУ СТРОКУ УДАЛИТЬ ИЛИ ЗАКОММЕНТИРОВАТЬ
         
         self.table.itemChanged.connect(self.on_main_table_item_changed)
-        # delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)
-        self.table.viewport().installEventFilter(self)
+        delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)
         splitter.addWidget(self.table)
         
         history_widget = QWidget(); history_layout = QVBoxLayout(history_widget)
@@ -1031,12 +1030,6 @@ class MainWindow(QDialog):
         for col, item in enumerate(items):
             self.table.setItem(row, col, item)
         self._create_row_buttons(row, entry_data)
-        # Защита от segfault: колонки с cellWidget должны иметь нередактируемый
-        # QTableWidgetItem, иначе двойной клик на них крашит PyQt6
-        for col in (3, 4):
-            placeholder = QTableWidgetItem()
-            placeholder.setFlags(placeholder.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.table.setItem(row, col, placeholder)
 
 
     def _update_analysis_widgets(self):
@@ -2562,29 +2555,6 @@ class MainWindow(QDialog):
         
         self._update_project_save_controls()
     
-    def eventFilter(self, obj, event):
-        if obj is self.table.viewport():
-            if event.type() == QtCore.QEvent.Type.MouseButtonDblClick:
-                pos = event.pos()
-                row = self.table.rowAt(pos.y())
-                col = self.table.columnAt(pos.x())
-                # Колонки с виджетами — не редактируем
-                if col in (3, 4):
-                    return True
-                item = self.table.item(row, col)
-                if item is None:
-                    return True
-                flags = item.flags()
-                if not (flags & Qt.ItemFlag.ItemIsEditable):
-                    return True
-                # Открываем редактор через QTimer чтобы не крашить внутри eventFilter
-                QtCore.QTimer.singleShot(0, lambda r=row, c=col: (
-                    self.table.setCurrentCell(r, c) or
-                    self.table.edit(self.table.model().index(r, c))
-                ))
-                return True
-        return super().eventFilter(obj, event)
-
     def on_main_table_item_changed(self, item: QTableWidgetItem):
         if not self.table.signalsBlocked():
             self._update_db_from_item(item)
