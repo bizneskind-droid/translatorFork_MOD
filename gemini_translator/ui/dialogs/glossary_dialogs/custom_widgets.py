@@ -21,18 +21,15 @@ class ExpandingTextEdit(QtWidgets.QTextEdit):
 
     def sizeHint(self):
         doc = self.document()
-        # Устанавливаем ширину для правильного расчета переноса строк.
-        # -10 - это запас на внутренние отступы виджета.
-        doc.setTextWidth(self.viewport().width())
-        # Возвращаем размер с идеальной высотой + небольшой отступ
+        vp = self.viewport()
+        width = vp.width() if vp is not None else 200
+        doc.setTextWidth(width)
         return QtCore.QSize(self.width(), int(doc.size().height()) + 5)
 
     def resizeEvent(self, event: QtGui.QResizeEvent):
         """Перехватываем изменение размера, чтобы обновить компоновку."""
         super().resizeEvent(event)
-        # Этот вызов заставит sizeHint пересчитаться с новой шириной
         self.updateGeometry()
-        # И сообщаем об этом, чтобы таблица тоже обновилась
         self.geometryChangeRequested.emit()
 
 
@@ -82,8 +79,10 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
         print(f"[DELEGATE] setModelData done")
 
     def sizeHint(self, option, index):
+        if not index.isValid():
+            return super().sizeHint(option, index)
         text = index.model().data(index, QtCore.Qt.ItemDataRole.DisplayRole)
-        doc = QtGui.QTextDocument(str(text))
+        doc = QtGui.QTextDocument(str(text) if text else "")
         doc.setDefaultFont(option.font)
         doc.setTextWidth(option.rect.width() - 10)
         height = int(doc.size().height()) + 10
