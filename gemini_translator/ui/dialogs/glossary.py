@@ -663,6 +663,7 @@ class MainWindow(QDialog):
         
         self.table.itemChanged.connect(self.on_main_table_item_changed)
         delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)
+        self.table.viewport().installEventFilter(self)
         splitter.addWidget(self.table)
         
         history_widget = QWidget(); history_layout = QVBoxLayout(history_widget)
@@ -2561,6 +2562,18 @@ class MainWindow(QDialog):
         
         self._update_project_save_controls()
     
+    def eventFilter(self, obj, event):
+        if obj is self.table.viewport():
+            if event.type() == QtCore.QEvent.Type.MouseButtonDblClick:
+                pos = event.pos()
+                row = self.table.rowAt(pos.y())
+                col = self.table.columnAt(pos.x())
+                item = self.table.item(row, col)
+                widget = self.table.cellWidget(row, col)
+                print(f"[DBLCLICK] row={row} col={col} item={item} cellWidget={widget}")
+                import sys; sys.stdout.flush()
+        return super().eventFilter(obj, event)
+
     def on_main_table_item_changed(self, item: QTableWidgetItem):
         if not self.table.signalsBlocked():
             self._update_db_from_item(item)
