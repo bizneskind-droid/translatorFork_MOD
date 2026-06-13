@@ -1,45 +1,35 @@
-import weakref  # <<< ИЗМЕНЕНИЕ 1: Добавлен импорт
+import weakref
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtWidgets import QSizePolicy, QTableWidget
 from PyQt6.QtCore import Qt, pyqtSignal
 
 
-      
 class ExpandingTextEdit(QtWidgets.QTextEdit):
-    """
-    Финальная версия v3.0 ("Коммуникатор").
-    Динамически изменяет свой размер и сообщает об этом через сигнал.
-    """
-    # Сигнал, который будет сообщать о новом желаемом размере
     geometryChangeRequested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        # При любом изменении текста, сообщаем, что геометрия изменилась
-        self.textChanged.connect(self.geometryChangeRequested.emit)
+        # Откладываем сигнал через QTimer чтобы не триггерить resizeRowToContents
+        # синхронно во время инициализации делегата — это приводит к segfault в PyQt6
+        self.textChanged.connect(lambda: QtCore.QTimer.singleShot(0, self.geometryChangeRequested.emit))
 
     def sizeHint(self):
         doc = self.document()
         vp = self.viewport()
-        width = vp.width() if vp is not None else 200
+        width = vp.width() if vp is not None and vp.width() > 0 else 200
         doc.setTextWidth(width)
         return QtCore.QSize(self.width(), int(doc.size().height()) + 5)
 
     def resizeEvent(self, event: QtGui.QResizeEvent):
-        """Перехватываем изменение размера, чтобы обновить компоновку."""
         super().resizeEvent(event)
         self.updateGeometry()
-        self.geometryChangeRequested.emit()
+        # Отложенный сигнал — не синхронный, не вызовет crash во время resize
+        QtCore.QTimer.singleShot(0, self.geometryChangeRequested.emit)
 
 
 class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
-    """
-    Финальная версия делегата v4.0 ("Синхронизатор").
-    Использует сигналы от редактора для идеальной синхронизации высоты строки.
-    """
     def createEditor(self, parent, option, index):
-        print(f"[DELEGATE] createEditor row={index.row()} col={index.column()}")
         editor = ExpandingTextEdit(parent)
         table = self.parent()
         if isinstance(table, QtWidgets.QTableWidget):
@@ -50,33 +40,23 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
                 if tbl is not None and 0 <= row < tbl.rowCount():
                     tbl.resizeRowToContents(row)
             editor.geometryChangeRequested.connect(_resize_row)
-
         editor.installEventFilter(self)
-        print(f"[DELEGATE] createEditor done")
         return editor
 
     def setEditorData(self, editor, index):
-        print(f"[DELEGATE] setEditorData row={index.row()} col={index.column()}")
-        # Блокируем сигналы модели пока устанавливаем данные в редактор —
-        # иначе setPlainText триггерит itemChanged → _run_full_analysis →
-        # перестройка таблицы пока редактор ещё открывается → segfault
         table = self.parent()
         if isinstance(table, QtWidgets.QTableWidget):
             table.blockSignals(True)
         try:
             value = index.model().data(index, QtCore.Qt.ItemDataRole.EditRole)
             editor.setPlainText(str(value) if value is not None else "")
-            editor.updateGeometry()
         finally:
             if isinstance(table, QtWidgets.QTableWidget):
                 table.blockSignals(False)
-        print(f"[DELEGATE] setEditorData done")
 
     def setModelData(self, editor, model, index):
-        print(f"[DELEGATE] setModelData row={index.row()} col={index.column()}")
         value = editor.toPlainText()
         model.setData(index, value, QtCore.Qt.ItemDataRole.EditRole)
-        
         table = self.parent()
         if isinstance(table, QtWidgets.QTableWidget):
             table_ref = weakref.ref(table)
@@ -86,7 +66,6 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
                 (0 <= row < tbl.rowCount()) and
                 tbl.resizeRowToContents(row)
             ))
-        print(f"[DELEGATE] setModelData done")
 
     def sizeHint(self, option, index):
         if not index.isValid():
@@ -94,14 +73,11 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
         text = index.model().data(index, QtCore.Qt.ItemDataRole.DisplayRole)
         doc = QtGui.QTextDocument(str(text) if text else "")
         doc.setDefaultFont(option.font)
-        doc.setTextWidth(option.rect.width() - 10)
+        doc.setTextWidth(max(option.rect.width() - 10, 1))
         height = int(doc.size().height()) + 10
         return QtCore.QSize(option.rect.width(), height)
-    
-    # Метод updateEditorGeometry теперь не нужен, так как его работу
-    # выполняет сигнал-слот. Его можно удалить или оставить пустым.
-    def updateEditorGeometry(self, editor: QtWidgets.QWidget, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex):
-        # Просто вызываем стандартную реализацию
+
+    def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
 
     def eventFilter(self, editor, event):
