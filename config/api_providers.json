@@ -936,6 +936,24 @@
         "max_output_tokens": 32000,
         "context_length": 1000000,
         "min_thinking_budget": false
+      },
+      "DeepSeek V4 Pro (AR)": {
+        "id": "deepseek-v4-pro",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 32000,
+        "context_length": 1000000,
+        "min_thinking_budget": false
+      },
+      "GLM 5.1 (AR)": {
+        "id": "glm-5.1",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 8192,
+        "context_length": 128000,
+        "min_thinking_budget": false
       }
     }
   }
