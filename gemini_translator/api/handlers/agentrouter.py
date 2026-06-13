@@ -166,13 +166,15 @@ class AgentRouterApiHandler(BaseApiHandler):
                     try:
                         async for raw_line in response.content:
                             line_str = raw_line.decode("utf-8").strip()
-                            if raw_lines is not None:
-                                raw_lines.append(line_str)
-                            if not line_str or not line_str.startswith("data: "):
+                            if not line_str:
+                                continue
+                            if not line_str.startswith("data: "):
+                                print(f"[AGENTROUTER SSE] non-data line: {line_str[:200]!r}")
                                 continue
                             data_str = line_str[len("data: "):]
                             if data_str == "[DONE]":
                                 break
+                            print(f"[AGENTROUTER SSE] chunk: {data_str[:300]!r}")
                             try:
                                 chunk = json.loads(data_str)
                             except json.JSONDecodeError:
