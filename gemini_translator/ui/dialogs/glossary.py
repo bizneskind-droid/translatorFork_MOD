@@ -662,7 +662,7 @@ class MainWindow(QDialog):
         # self.table.setSortingEnabled(True)  <-- ЭТУ СТРОКУ УДАЛИТЬ ИЛИ ЗАКОММЕНТИРОВАТЬ
         
         self.table.itemChanged.connect(self.on_main_table_item_changed)
-        delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)
+        # delegate = ExpandingTextEditDelegate(self.table); self.table.setItemDelegate(delegate)  # DEBUG: отключено для диагностики segfault
         splitter.addWidget(self.table)
         
         history_widget = QWidget(); history_layout = QVBoxLayout(history_widget)
