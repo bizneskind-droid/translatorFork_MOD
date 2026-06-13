@@ -877,5 +877,66 @@
         "selector": "div:has-text('Writing')"
       }
     ]
+  },
+  "agentrouter": {
+    "display_name": "AgentRouter (Claude)",
+    "handler_class": "AgentRouterApiHandler",
+    "base_url": "http://127.0.0.1:3000/v1/chat/completions",
+    "is_async": true,
+    "needs_warmup": false,
+    "visible": true,
+    "file_suffix": "_translated_ar.html",
+    "shared_request_counter": false,
+    "reset_policy": {
+      "type": "rolling",
+      "duration_hours": 24
+    },
+    "models": {
+      "Claude Sonnet 4.5": {
+        "id": "claude-sonnet-4-5",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 16000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Claude Sonnet 4.6": {
+        "id": "claude-sonnet-4-6",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 16000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Claude Opus 4.5": {
+        "id": "claude-opus-4-5",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 16000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Claude Opus 4.6": {
+        "id": "claude-opus-4-6",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 16000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "DeepSeek V4 Flash (AR)": {
+        "id": "deepseek-v4-flash",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 32000,
+        "context_length": 1000000,
+        "min_thinking_budget": false
+      }
+    }
   }
 }

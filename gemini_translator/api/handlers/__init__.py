@@ -12,6 +12,7 @@ if __name__ != "__main__":
     from .local import LocalApiHandler
     from .openrouter import OpenRouterApiHandler
     from .workascii_chatgpt import WorkAsciiChatGptApiHandler
+    from .agentrouter import AgentRouterApiHandler
 
     __all__ = [
         "BrowserApiHandler",
@@ -21,7 +22,8 @@ if __name__ != "__main__":
         "DeepseekApiHandler",
         "LocalApiHandler",
         "OpenRouterApiHandler",
-        "WorkAsciiChatGptApiHandler"
+        "WorkAsciiChatGptApiHandler",
+        "AgentRouterApiHandler",
     ]
 
 # =============================================================================
