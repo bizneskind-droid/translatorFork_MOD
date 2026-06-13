@@ -211,8 +211,9 @@ class AgentRouterApiHandler(BaseApiHandler):
                         )
 
                     if not collected_text:
+                        print(f"[AGENTROUTER DEBUG] empty response: finish_reason={finish_reason!r}")
                         raise ValidationFailedError(
-                            "AgentRouter вернул пустой ответ."
+                            f"AgentRouter вернул пустой ответ. finish_reason={finish_reason!r}"
                         )
                     if finish_reason == "length" and not allow_incomplete:
                         raise PartialGenerationError(
