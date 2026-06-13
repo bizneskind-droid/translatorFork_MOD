@@ -46,9 +46,16 @@ class ExpandingTextEditDelegate(QtWidgets.QStyledItemDelegate):
         table = self.parent()
         if isinstance(table, QtWidgets.QTableWidget):
             row = index.row()
-            # Соединяем сигнал от редактора с методом таблицы
-            editor.geometryChangeRequested.connect(lambda: table.resizeRowToContents(row))
-        
+            # Используем weakref чтобы не держать живую ссылку на таблицу —
+            # при втором двойном клике старый editor может стрельнуть сигнал
+            # в момент когда C++ объект таблицы уже в недействительном состоянии.
+            table_ref = weakref.ref(table)
+            def _resize_row():
+                tbl = table_ref()
+                if tbl is not None and 0 <= row < tbl.rowCount():
+                    tbl.resizeRowToContents(row)
+            editor.geometryChangeRequested.connect(_resize_row)
+
         editor.installEventFilter(self)
         return editor
 
