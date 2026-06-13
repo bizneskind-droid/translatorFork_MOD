@@ -2568,11 +2568,17 @@ class MainWindow(QDialog):
                 pos = event.pos()
                 row = self.table.rowAt(pos.y())
                 col = self.table.columnAt(pos.x())
+                # Колонки с виджетами — не редактируем
+                if col in (3, 4):
+                    return True
                 item = self.table.item(row, col)
-                widget = self.table.cellWidget(row, col)
-                print(f"[DBLCLICK] row={row} col={col} item={item} cellWidget={widget}")
-                import sys; sys.stdout.flush()
-                # DEBUG: блокируем открытие редактора чтобы проверить - краш в делегате или нет
+                if item is None:
+                    return True
+                flags = item.flags()
+                if not (flags & Qt.ItemFlag.ItemIsEditable):
+                    return True
+                # Открываем редактор вручную через persistent editor
+                self.table.editItem(item)
                 return True
         return super().eventFilter(obj, event)
 
