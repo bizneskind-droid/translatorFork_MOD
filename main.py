@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
+import faulthandler
+faulthandler.enable()  # DEBUG: печатает C-уровень стектрейса при segfault
 import os_patch
 import builtins
 import argparse
