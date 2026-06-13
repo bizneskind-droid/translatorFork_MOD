@@ -2577,9 +2577,11 @@ class MainWindow(QDialog):
                 flags = item.flags()
                 if not (flags & Qt.ItemFlag.ItemIsEditable):
                     return True
-                # Открываем редактор через setCurrentCell + edit
-                self.table.setCurrentCell(row, col)
-                self.table.edit(self.table.currentIndex())
+                # Открываем редактор через QTimer чтобы не крашить внутри eventFilter
+                QtCore.QTimer.singleShot(0, lambda r=row, c=col: (
+                    self.table.setCurrentCell(r, c) or
+                    self.table.edit(self.table.model().index(r, c))
+                ))
                 return True
         return super().eventFilter(obj, event)
 
