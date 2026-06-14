@@ -12,6 +12,9 @@ OpenAI-compatible /v1/chat/completions endpoint, supports SSE streaming.
 import aiohttp
 import asyncio
 import json
+import logging
+from datetime import datetime
+from pathlib import Path
 
 from ..base import BaseApiHandler
 from ..errors import (
@@ -36,6 +39,34 @@ class AgentRouterApiHandler(BaseApiHandler):
     Формат запросов: OpenAI /v1/chat/completions.
     Поддерживает SSE-стриминг и обычный JSON-режим.
     """
+
+    _cb_logger = logging.getLogger("agentrouter.content_blocked")
+
+    @staticmethod
+    def _dump_content_blocked(error_text: str, payload: dict, http_status: int):
+        try:
+            dump_dir = Path.home() / "translatorFork_MOD_logs"
+            dump_dir.mkdir(exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            dump_path = dump_dir / f"content_blocked_{ts}.txt"
+            payload_size = len(json.dumps(payload, ensure_ascii=False))
+            msg_preview = ""
+            for m in payload.get("messages", []):
+                content = m.get("content", "")
+                msg_preview += f"[{m.get('role', '?')}] {content[:300]}...\n"
+            dump = (
+                f"HTTP {http_status} — content-blocked\n"
+                f"Model: {payload.get('model', '?')}\n"
+                f"Stream: {payload.get('stream', '?')}\n"
+                f"Payload size: {payload_size} chars\n"
+                f"Messages preview:\n{msg_preview}"
+                f"\n--- Raw error response ---\n"
+                f"{error_text}\n"
+            )
+            dump_path.write_text(dump, encoding="utf-8")
+            _cb_logger.warning("content-blocked dump → %s", dump_path)
+        except Exception:
+            pass
 
     def setup_client(self, client_override=None, proxy_settings=None):
         super().setup_client(client_override, proxy_settings)
@@ -92,6 +123,8 @@ class AgentRouterApiHandler(BaseApiHandler):
                 self.worker.model_config.get("max_output_tokens", 8192) * 0.98
             )
 
+        payload["thinking"] = {"type": "disabled"}
+
         self._debug_record_request(
             {
                 "method": "POST",
@@ -123,7 +156,7 @@ class AgentRouterApiHandler(BaseApiHandler):
                         except Exception:
                             err_code = ""
                         if "content-blocked" in err_code or "content-blocked" in error_text:
-                            # Ретраим без штрафных карточек через NetworkError
+                            self._dump_content_blocked(error_text, payload, response.status)
                             raise NetworkError(
                                 "AgentRouter заблокировал запрос (content-blocked). "
                                 "Попробуйте уменьшить размер пакета глоссария."
