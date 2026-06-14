@@ -31,7 +31,7 @@ class AgentRouterApiHandler(BaseApiHandler):
     Хендлер для локального прокси AgentRouter (server.js на порту 3000).
 
     API-ключ в приложении не нужен — прокси берёт его из своего config.json
-    и сам подставляет нужные upstream-заголовки (User-Agent, HTTP-Referer и т.д.).
+    и сам подставляет нужные upstream-заголовки.
 
     Формат запросов: OpenAI /v1/chat/completions.
     Поддерживает SSE-стриминг и обычный JSON-режим.
@@ -46,8 +46,6 @@ class AgentRouterApiHandler(BaseApiHandler):
         self.base_url = self.worker.provider_config.get(
             "base_url", "http://127.0.0.1:3000/v1/chat/completions"
         )
-        # Прокси локальный — прокидывать proxy_settings через него не нужно,
-        # но session инициализируем как обычно.
         self._proactive_session_init()
         return True
 
@@ -62,7 +60,6 @@ class AgentRouterApiHandler(BaseApiHandler):
     ):
         session = await self._get_or_create_session_internal()
 
-        # Прокси не требует Bearer-токена от клиента
         headers = {
             "Content-Type": "application/json",
         }
@@ -95,10 +92,6 @@ class AgentRouterApiHandler(BaseApiHandler):
                 self.worker.model_config.get("max_output_tokens", 8192) * 0.98
             )
 
-        # Отключаем extended thinking — AgentRouter может включать его автоматически
-        # для Claude, но для перевода он не нужен и съедает все токены до ответа.
-        payload["thinking"] = {"type": "disabled"}
-
         self._debug_record_request(
             {
                 "method": "POST",
@@ -124,22 +117,22 @@ class AgentRouterApiHandler(BaseApiHandler):
                     )
 
                     if response.status == 400:
-                        # Пробуем распарсить тело ошибки
                         try:
                             err_json = json.loads(error_text)
                             err_code = err_json.get("error", {}).get("code", "")
                         except Exception:
                             err_code = ""
-                        sys_instr = self.worker.prompt_builder.system_instruction or ""
-                        print(f"[AGENTROUTER DEBUG] HTTP 400 response: code={err_code!r} body={error_text[:500]!r}")
-                        print(f"[AGENTROUTER DEBUG] system_instruction[:300]={sys_instr[:300]!r}")
-                        print(f"[AGENTROUTER DEBUG] prompt[:500]={prompt[:500]!r}")
                         if "content-blocked" in err_code or "content-blocked" in error_text:
-                            raise ContentFilterError(
-                                f"AgentRouter заблокировал контент (content-blocked). "
-                                f"Попробуйте другую модель или измените промпт."
+                            # AgentRouter иногда ложно блокирует большие глоссарные промпты.
+                            # Используем TemporaryRateLimitError чтобы задача ретраилась,
+                            # а не помечалась перманентно заблокированной.
+                            raise TemporaryRateLimitError(
+                                "AgentRouter вернул content-blocked (возможно ложное срабатывание). "
+                                "Задача будет повторена через 10с.",
+                                delay_seconds=10,
                             )
                         raise NetworkError(f"Неверный запрос (400): {error_text[:200]}")
+
                     if response.status in [401, 403]:
                         raise RateLimitExceededError(
                             f"Ошибка доступа ({response.status}): {error_text[:150]}"
@@ -170,20 +163,16 @@ class AgentRouterApiHandler(BaseApiHandler):
                     try:
                         async for raw_line in response.content:
                             line_str = raw_line.decode("utf-8").strip()
-                            if not line_str:
-                                continue
-                            if not line_str.startswith("data: "):
-                                print(f"[AGENTROUTER SSE] non-data line: {line_str[:200]!r}")
+                            if raw_lines is not None:
+                                raw_lines.append(line_str)
+                            if not line_str or not line_str.startswith("data: "):
                                 continue
                             data_str = line_str[len("data: "):]
                             if data_str == "[DONE]":
                                 break
-                            print(f"[AGENTROUTER SSE] chunk: {data_str[:300]!r}")
                             try:
                                 chunk = json.loads(data_str)
                             except json.JSONDecodeError:
-                                continue
-                            if chunk is None:
                                 continue
 
                             choices = chunk.get("choices") or []
@@ -219,15 +208,8 @@ class AgentRouterApiHandler(BaseApiHandler):
                         )
 
                     if not collected_text:
-                        print(f"[AGENTROUTER DEBUG] empty response: finish_reason={finish_reason!r}")
-                        if finish_reason == "max_tokens":
-                            raise PartialGenerationError(
-                                f"AgentRouter: модель исчерпала токены в фазе reasoning, контент не получен.",
-                                partial_text="",
-                                reason="LENGTH",
-                            )
                         raise ValidationFailedError(
-                            f"AgentRouter вернул пустой ответ. finish_reason={finish_reason!r}"
+                            "AgentRouter вернул пустой ответ."
                         )
                     if finish_reason == "length" and not allow_incomplete:
                         raise PartialGenerationError(
