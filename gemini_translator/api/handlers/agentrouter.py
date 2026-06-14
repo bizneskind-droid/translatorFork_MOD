@@ -95,16 +95,15 @@ class AgentRouterApiHandler(BaseApiHandler):
             "Content-Type": "application/json",
         }
 
-        messages = (
-            [
-                {
-                    "role": "system",
-                    "content": self.worker.prompt_builder.system_instruction,
-                }
-            ]
-            if self.worker.prompt_builder.system_instruction
-            else []
-        ) + [{"role": "user", "content": prompt}]
+        messages = [{"role": "user", "content": prompt}]
+        if self.worker.prompt_builder.system_instruction:
+            # Вставляем system-инструкцию в user-сообщение, а не отдельной ролью —
+            # AgentRouter фильтрует отдельные system-сообщения с большими инструкциями
+            messages[0]["content"] = (
+                self.worker.prompt_builder.system_instruction
+                + "\n\n---\n\n"
+                + prompt
+            )
 
         payload = {
             "model": self.worker.model_id,
