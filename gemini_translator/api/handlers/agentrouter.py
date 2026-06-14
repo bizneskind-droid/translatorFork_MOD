@@ -252,7 +252,13 @@ class AgentRouterApiHandler(BaseApiHandler):
 
                 # ── Ветка Б: обычный JSON ─────────────────────────────────
                 else:
-                    result = await response.json()
+                    raw_text = await response.text()
+                    try:
+                        result = json.loads(raw_text)
+                    except json.JSONDecodeError:
+                        raise NetworkError(
+                            f"AgentRouter вернул не-JSON (200): {raw_text[:300]}"
+                        )
                     self._debug_record_response(
                         result,
                         status="http_200",
