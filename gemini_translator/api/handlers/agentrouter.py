@@ -123,13 +123,10 @@ class AgentRouterApiHandler(BaseApiHandler):
                         except Exception:
                             err_code = ""
                         if "content-blocked" in err_code or "content-blocked" in error_text:
-                            # AgentRouter иногда ложно блокирует большие глоссарные промпты.
-                            # Используем TemporaryRateLimitError чтобы задача ретраилась,
-                            # а не помечалась перманентно заблокированной.
-                            raise TemporaryRateLimitError(
-                                "AgentRouter вернул content-blocked (возможно ложное срабатывание). "
-                                "Задача будет повторена через 10с.",
-                                delay_seconds=10,
+                            # Ретраим без штрафных карточек через NetworkError
+                            raise NetworkError(
+                                "AgentRouter заблокировал запрос (content-blocked). "
+                                "Попробуйте уменьшить размер пакета глоссария."
                             )
                         raise NetworkError(f"Неверный запрос (400): {error_text[:200]}")
 
