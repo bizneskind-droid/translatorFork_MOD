@@ -123,8 +123,6 @@ class AgentRouterApiHandler(BaseApiHandler):
                 self.worker.model_config.get("max_output_tokens", 8192) * 0.98
             )
 
-        payload["thinking"] = {"type": "disabled"}
-
         self._debug_record_request(
             {
                 "method": "POST",
