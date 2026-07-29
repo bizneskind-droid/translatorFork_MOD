@@ -755,7 +755,39 @@ class SettingsManager(QObject):
     def save_last_glossary_generation_settings(self, settings_dict): return self._generic_saver('last_glossary_generation_settings', settings_dict or {})
     def get_ai_correction_review_settings(self): return self._generic_loader('ai_correction_review_settings', {})
     def save_ai_correction_review_settings(self, settings_dict): return self._generic_saver('ai_correction_review_settings', settings_dict or {})
-    
+
+    # --- Telegram ---
+    _TELEGRAM_DEFAULTS = {
+        "enabled": False,
+        "bot_token": "",
+        "chat_id": "",
+        "notify_every_n": 10,
+    }
+
+    def load_telegram_settings(self) -> dict:
+        saved = self._generic_loader("telegram_settings", {})
+        result = dict(self._TELEGRAM_DEFAULTS)
+        result.update(saved)
+        return result
+
+    def save_telegram_settings(self, telegram_dict: dict):
+        return self._generic_saver("telegram_settings", telegram_dict or {})
+
+    # --- Git Auto-Push ---
+    _GIT_AUTOPUSH_DEFAULTS = {
+        "enabled": False,
+        "repo_path": "",
+    }
+
+    def load_git_autopush_settings(self) -> dict:
+        saved = self._generic_loader("git_autopush_settings", {})
+        result = dict(self._GIT_AUTOPUSH_DEFAULTS)
+        result.update(saved)
+        return result
+
+    def save_git_autopush_settings(self, settings_dict: dict):
+        return self._generic_saver("git_autopush_settings", settings_dict or {})
+
     def save_proxy_settings(self, proxy_settings_dict):
         with self.file_lock:
             self._cache["proxy_settings"] = proxy_settings_dict

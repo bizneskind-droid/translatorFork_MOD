@@ -963,6 +963,26 @@ if __name__ == "__main__":
     app.proxy_controller = GlobalProxyController(app.event_bus)
     proxy_settings = app.settings_manager.load_proxy_settings()
 
+    # --- Telegram-нотификатор ---
+    from gemini_translator.utils.telegram_notifier import TelegramNotifier
+    tg_settings = app.settings_manager.load_telegram_settings()
+    app.telegram_notifier = TelegramNotifier(
+        bot_token=tg_settings.get("bot_token", ""),
+        chat_id=tg_settings.get("chat_id", ""),
+        enabled=tg_settings.get("enabled", False),
+        notify_every_n=tg_settings.get("notify_every_n", 10),
+    )
+    app.telegram_notifier.connect_to_bus(app.event_bus)
+
+    # --- Git Auto-Push ---
+    from gemini_translator.utils.git_auto_publisher import GitAutoPublisher
+    git_settings = app.settings_manager.load_git_autopush_settings()
+    app.git_auto_publisher = GitAutoPublisher(
+        repo_path=git_settings.get("repo_path", ""),
+        enabled=git_settings.get("enabled", False),
+    )
+    app.git_auto_publisher.connect_to_bus(app.event_bus)
+
     temp_folder = os.path.join(
         os.path.expanduser("~"), ".epub_translator_temp")
     os.makedirs(temp_folder, exist_ok=True)

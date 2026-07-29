@@ -206,7 +206,7 @@
       }
     }
   },
- "deepseek": {
+  "deepseek": {
     "display_name": "Deepseek API",
     "provider": "deepseek",
     "handler_class": "DeepseekApiHandler",
@@ -304,7 +304,7 @@
         "default_reasoning_effort": "high"
       }
     }
-   },
+  },
   "perplexytiApiMOD": {
     "display_name": "Perplexity API MOD",
     "handler_class": "OpenRouterApiHandler",
@@ -452,8 +452,8 @@
         "rpm": 20,
         "max_concurrent_requests": 30,
         "needs_chunking": true,
-        "context_length": 100000,
-        "max_output_tokens": 7500
+        "context_length": 60000,
+        "max_output_tokens": 15000
       },
       "Qwen3 Coder 480B A35B (бесплатно)": {
         "id": "qwen/qwen3-coder:free",
@@ -503,14 +503,6 @@
         "needs_chunking": true,
         "context_length": 30000,
         "max_output_tokens": 7500
-      },
-      "Xiaomi: MiMo-V2-Flash (бесплатно)": {
-        "id": "xiaomi/mimo-v2-flash:free",
-        "rpm": 20,
-        "max_concurrent_requests": 30,
-        "needs_chunking": true,
-        "context_length": 60000,
-        "max_output_tokens": 15000
       }
     }
   },
@@ -953,6 +945,312 @@
         "max_concurrent_requests": 3,
         "max_output_tokens": 8192,
         "context_length": 128000,
+        "min_thinking_budget": false
+      },
+      "Claude Opus 4.7": {
+        "id": "claude-opus-4-7",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Claude Opus 4.8": {
+        "id": "claude-opus-4-8",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Claude Opus 5": {
+        "id": "claude-opus-5",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 30000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Claude Fable 5": {
+        "id": "claude-fable-5",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 30000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "GLM 5.2 (AR)": {
+        "id": "glm-5.2",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 32000,
+        "context_length": 128000,
+        "min_thinking_budget": false
+      },
+      "GPT 5.5 (AR)": {
+        "id": "gpt-5.5",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 16000,
+        "context_length": 128000,
+        "min_thinking_budget": false
+      },
+      "GPT 5.6 Sol (AR)": {
+        "id": "gpt-5.6-sol",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 30000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Kimi K3 (AR)": {
+        "id": "kimi-k3",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 30000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      }
+    }
+  },
+  "qoder": {
+    "display_name": "Qoder CLI (local)",
+    "handler_class": "QoderApiHandler",
+    "binary": "",
+    "output_format": "json",
+    "is_async": true,
+    "needs_warmup": false,
+    "visible": true,
+    "file_suffix": "_translated_qoder.html",
+    "shared_request_counter": false,
+    "base_timeout": 900,
+    "reset_policy": {
+      "type": "rolling",
+      "duration_hours": 24
+    },
+    "models": {
+      "Auto (Qoder)": {
+        "id": "Auto",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 16000,
+        "context_length": 200000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "Ultimate (Qoder)": {
+        "id": "Ultimate",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "Performance (Qoder)": {
+        "id": "Performance",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "Efficient (Qoder)": {
+        "id": "Efficient",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 16000,
+        "context_length": 200000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "Lite (Qoder)": {
+        "id": "Lite",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 16000,
+        "context_length": 128000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "Qwen3.7 Max (Qoder)": {
+        "id": "Qwen3.7-Max",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 32000,
+        "context_length": 256000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "Qwen3.7 Plus (Qoder)": {
+        "id": "Qwen3.7-Plus",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 32000,
+        "context_length": 256000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "GLM 5.2 (Qoder)": {
+        "id": "GLM-5.2",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 8192,
+        "context_length": 128000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "Kimi K2.7 Code (Qoder)": {
+        "id": "Kimi-K2.7-Code",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 16000,
+        "context_length": 256000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "DeepSeek V4 Pro (Qoder)": {
+        "id": "DeepSeek-V4-Pro",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 32000,
+        "context_length": 1000000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "DeepSeek V4 Flash (Qoder)": {
+        "id": "DeepSeek-V4-Flash",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 32000,
+        "context_length": 1000000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "min_thinking_budget": false
+      },
+      "MiniMax M3 (Qoder)": {
+        "id": "MiniMax-M3",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 16000,
+        "context_length": 256000,
+        "reasoning_effort": "",
+        "thinkingLevel": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
         "min_thinking_budget": false
       }
     }

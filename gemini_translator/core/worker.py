@@ -636,15 +636,20 @@ class UniversalWorker(QObject):
 
         # --- ИЗМЕНЕНИЕ 2: Упрощенная логика смены стратегии ---
         default_stream_mode = {
-            'epub_batch': False, 'epub': True, 'epub_chunk': False,
+            'epub_batch': True, 'epub': True, 'epub_chunk': False,
             'glossary_batch_task': True, 'raw_text_translation': True
         }.get(task_type, True)
 
         use_stream = default_stream_mode
         should_log_strategy = False
 
-        # Для "больших" задач (пакеты и целые главы)
-        if task_type in ('epub', 'glossary_batch_task'):
+        # Для epub_batch: ВСЕГДА стрим, без инверсии.
+        # agentrouter nginx убивает non-stream через 60 сек — инверсия гарантирует 504.
+        if task_type == 'epub_batch':
+            use_stream = True  # Безусловно, никогда не менять.
+
+        # Для "больших" задач (целые главы, глоссарь)
+        elif task_type in ('epub', 'glossary_batch_task'):
             # Меняем стратегию только после ВТОРОЙ ошибки (failure_count >= 2).
             # То есть на 3-й и 4-й попытках пробуем альтернативный метод.
             if failure_count >= 2:

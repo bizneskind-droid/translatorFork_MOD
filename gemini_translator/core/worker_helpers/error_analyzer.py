@@ -17,14 +17,14 @@ from gemini_translator.api.errors import (
 
 class ErrorAnalyzer:
     INFINITE_RETRY_PACKAGE_TYPES = {'epub_batch', 'glossary_batch_task'}
-    TERMINAL_PACKAGE_ERRORS = {ErrorType.API_ERROR, ErrorType.VALIDATION}
+    TERMINAL_PACKAGE_ERRORS = {ErrorType.API_ERROR, ErrorType.VALIDATION, ErrorType.CONTENT_FILTER}
     
     # --- Конфигурация правил отказов ---
     FAILURE_RULES = {
         ErrorType.PARTIAL_GENERATION:   {'max_attempts': 3, 'allows_chunking': True},
         ErrorType.VALIDATION:           {'max_attempts': 6, 'max_total_attempts': 6, 'allows_chunking': True},
         ErrorType.NETWORK:              {'max_attempts': 2, 'allows_chunking': False},
-        ErrorType.CONTENT_FILTER:       {'max_attempts': 2, 'allows_chunking': False},
+        ErrorType.CONTENT_FILTER:       {'max_attempts': 1, 'allows_chunking': False},
         ErrorType.API_ERROR:            {'max_attempts': 2, 'allows_chunking': True},
         ErrorType.CANCEL:               {'max_attempts': 0, 'allows_chunking': False},
     }

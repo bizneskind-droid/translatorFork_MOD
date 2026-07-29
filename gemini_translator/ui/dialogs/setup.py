@@ -533,6 +533,11 @@ class InitialSetupDialog(QDialog):
             self.proxy_button.setMinimumHeight(36)
             bottom_panel_layout.addWidget(self.proxy_button)
 
+        self.telegram_button = QPushButton("Telegram")
+        self.telegram_button.setObjectName("compactActionButton")
+        self.telegram_button.setMinimumHeight(36)
+        bottom_panel_layout.addWidget(self.telegram_button)
+
         bottom_panel_layout.addWidget(self.use_project_settings_btn)
 
         right_buttons_layout = QHBoxLayout()
@@ -599,6 +604,7 @@ class InitialSetupDialog(QDialog):
         self.close_btn.clicked.connect(self._return_to_main_menu_from_button)
         if self.proxy_button is not None:
             self.proxy_button.clicked.connect(self._open_proxy_settings)
+        self.telegram_button.clicked.connect(self._open_telegram_settings)
         self.project_actions_widget.build_epub_requested.connect(self._open_epub_builder_standalone)
 
         self.model_settings_widget.settings_changed.connect(self._mark_settings_as_dirty)
@@ -1215,6 +1221,12 @@ class InitialSetupDialog(QDialog):
         from .proxy import ProxySettingsDialog
 
         dialog = ProxySettingsDialog(self, self.settings_manager)
+        dialog.exec()
+
+    def _open_telegram_settings(self):
+        from .telegram_settings import TelegramSettingsDialog
+
+        dialog = TelegramSettingsDialog(self, self.settings_manager)
         dialog.exec()
 
     def _update_proxy_display(self, settings):

@@ -117,10 +117,12 @@ class AgentRouterApiHandler(BaseApiHandler):
 
         if max_output_tokens is not None:
             payload["max_tokens"] = max_output_tokens
-        elif allow_incomplete:
-            payload["max_tokens"] = int(
-                self.worker.model_config.get("max_output_tokens", 8192) * 0.98
-            )
+        else:
+            configured_limit = self.worker.model_config.get("max_output_tokens")
+            if configured_limit is not None:
+                payload["max_tokens"] = int(int(configured_limit) * 0.98)
+            elif allow_incomplete:
+                payload["max_tokens"] = int(8192 * 0.98)
 
         self._debug_record_request(
             {
@@ -154,9 +156,9 @@ class AgentRouterApiHandler(BaseApiHandler):
                             err_code = ""
                         if "content-blocked" in err_code or "content-blocked" in error_text:
                             self._dump_content_blocked(error_text, payload, response.status)
-                            raise NetworkError(
+                            raise ContentFilterError(
                                 "AgentRouter заблокировал запрос (content-blocked). "
-                                "Попробуйте уменьшить размер пакета глоссария."
+                                "Глава пропущена."
                             )
                         raise NetworkError(f"Неверный запрос (400): {error_text[:200]}")
 
@@ -171,6 +173,12 @@ class AgentRouterApiHandler(BaseApiHandler):
                     if response.status == 404:
                         raise ModelNotFoundError(
                             f"Модель {self.worker.model_id} не найдена (404)."
+                        )
+                    if response.status == 504:
+                        raise NetworkError(
+                            f"Upstream таймаут (504) — agentrouter.org nginx "
+                            f"не дождался ответа от Claude. Ретрай сработает.",
+                            delay_seconds=5,
                         )
                     if response.status in [500, 502, 503]:
                         raise NetworkError(
@@ -240,9 +248,9 @@ class AgentRouterApiHandler(BaseApiHandler):
                         raise ValidationFailedError(
                             "AgentRouter вернул пустой ответ."
                         )
-                    if finish_reason == "length" and not allow_incomplete:
+                    if finish_reason in ("length", "max_tokens") and not allow_incomplete:
                         raise PartialGenerationError(
-                            "Превышен лимит токенов (finish_reason=length)",
+                            f"Превышен лимит токенов (finish_reason={finish_reason})",
                             partial_text=collected_text,
                             reason="LENGTH",
                         )
@@ -263,14 +271,22 @@ class AgentRouterApiHandler(BaseApiHandler):
                         status="http_200",
                         extra={"mode": "full", "http_status": response.status},
                     )
+                    first_choice = (result.get("choices") or [{}])[0]
                     content = (
-                        (result.get("choices") or [{}])[0]
+                        first_choice
                         .get("message", {})
                         .get("content", "")
                     )
                     if not content:
                         raise ValidationFailedError(
                             "AgentRouter вернул пустой ответ."
+                        )
+                    finish_reason = first_choice.get("finish_reason")
+                    if finish_reason in ("length", "max_tokens") and not allow_incomplete:
+                        raise PartialGenerationError(
+                            f"Превышен лимит токенов (finish_reason={finish_reason})",
+                            partial_text=content,
+                            reason="LENGTH",
                         )
                     return content
 

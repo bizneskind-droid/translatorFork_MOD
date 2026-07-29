@@ -13,6 +13,7 @@ if __name__ != "__main__":
     from .openrouter import OpenRouterApiHandler
     from .workascii_chatgpt import WorkAsciiChatGptApiHandler
     from .agentrouter import AgentRouterApiHandler
+    from .qoder import QoderApiHandler
 
     __all__ = [
         "BrowserApiHandler",
@@ -24,6 +25,7 @@ if __name__ != "__main__":
         "OpenRouterApiHandler",
         "WorkAsciiChatGptApiHandler",
         "AgentRouterApiHandler",
+        "QoderApiHandler",
     ]
 
 # =============================================================================
