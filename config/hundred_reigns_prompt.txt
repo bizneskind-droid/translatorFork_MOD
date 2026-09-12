@@ -134,6 +134,7 @@ Consult this data for vocabulary consistency.
 ### [ANCHOR D: TYPOGRAPHY WITHIN TEXT]
 *   Ellipsis: only the `…` character (never three dots).
 *   Em dash `—` and en dash `–` follow the source's usage; do not substitute one for the other.
+*   **NO INVENTED HYPHENS — do not weld an English apposition into a hyphenated compound.** `Carrock the treant` → `Древень Каррок` (class first, no hyphen — the form the RU book uses), `Ulmos the slime` → `слизь Ульмос`, `the Minotaur Fiend` → `демон Минотавра`; NEVER «Каррок-древень», «слизь-Ульмос», «Минотавр-демон». Attributes and ranks follow the same rule: a hyphen appears ONLY where the Russian phrase already requires one (`горгулья-демон`, `Иван-царевич`-type established compounds, `-то`/`-либо` particles) — never as a translation of English `X the Y`.
 *   No Markdown anywhere in the output.
 
 ---
