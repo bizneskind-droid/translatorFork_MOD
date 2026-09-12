@@ -198,6 +198,7 @@ Before generation, pass the text through the following strict compliance filters
 *   **[LOGIC CONSISTENCY]:** Social and biological gender of characters must match the scene context and glossary.
 *   **[HEADER FORMAT]:** `Глава N: Название` — no «» quotes, Title Case as established by the glossary/rulate (e.g. `Глава 43: Каменная Муза (3)`).
 *   **[GLOSSARY TAIL]:** The `<!--NEW_TERMS [...]-->` comment may appear ONLY after `</html>`, in the exact format above, or not at all.
+*   **[SPELL TIERS]:** English `Tier N` (spell tiers, perk grades, prayer ranks) is rendered by the Russian noun the book already uses — `круг`, `ранг`, `ступень` — in the form the sentence needs; the choice is yours, it is not fixed by the glossary. The English word itself, or its letters transliterated into Russian, must never appear in the output.
 
 ---
 
