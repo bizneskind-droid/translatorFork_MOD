@@ -147,23 +147,23 @@ rendered inconsistently without a fixed translation.
 
 Format (one line, strictly valid JSON array inside the comment):
 
-<!--NEW_TERMS [{"original":"Casval","rus":"Касвал","note":"Муж.; разведчик Вивр; Скл. (Касвала, Касвалу)"}]-->
+<!--NEW_TERMS [{"original":"Casval","rus":"Касвал","note":"Муж.; разведчик Вивр; Скл."}]-->
 
 Rules:
 *   **Only significant entities:** names, titles, places, skills, classes, disciplines, perks, items, organizations, races, currencies — words a translator must render identically every time. **Character classes and disciplines count as entities even when lowercase in the source** (e.g. `Saboteur`, `Thaumaturgy`).
 *   **A term that is already in the glossary must NOT be repeated here.** No style suggestions, no synonyms, no common words (verbs, adjectives, everyday objects).
 *   **Split compound names into one entry per part whenever a part can stand alone.** A long key (`Elsa Nightingale`) fires only on that exact full string; if the text also uses a short form — a bare surname (`Nightingale`), a bare first name (`Elsa`), a title plus surname (`Miss Nightingale`) — the short form gets its OWN entry as well. Otherwise the next chapter re-invents it. Same for titles/places: `Castle Carcas` and the bare city `Carcas` are two entries.
-*   **Each entry carries the tags of the word IT translates** — the parts usually differ: `{"original":"Elsa","rus":"Эльза","note":"Жен.; имя-псевдоним Шёлк; Скл. (Эльзы, Эльзе, Эльзу)"}` together with `{"original":"Nightingale","rus":"Найтингейл","note":"Жен.; фамилия-псевдоним Шёлк; Нескл."}`. Never write vague relative tags such as `первая часть Нескл.` — the engine feeds `note` back verbatim, and a note that describes the entry instead of the word is useless.
+*   **Each entry carries the tags of the word IT translates** — the parts usually differ: `{"original":"Elsa","rus":"Эльза","note":"Жен.; имя-псевдоним Шёлк; Скл."}` together with `{"original":"Nightingale","rus":"Найтингейл","note":"Жен.; фамилия-псевдоним Шёлк; Нескл."}`. Never write vague relative tags such as `первая часть Нескл.` — the engine feeds `note` back verbatim, and a note that describes the entry instead of the word is useless.
 *   **The first field of `note` is ALWAYS one of `Муж.` / `Жен.` / `Ср.` / `мн.` — for every entry, split parts included.** Surnames, cities, keeps and artifacts are no exception: a note beginning with a description (`род; фамилия; Нескл.`) is invalid — write `Жен.; фамилия рода Оремонгер; Нескл.`.
 *   **`original` is the spelling that actually stands in the fragment.** If the author spells the same entity inconsistently (a typo like `Carcass` for `Carcas`), emit the entry for the spelling present here and keep `rus` in the single normal Russian form; every spelling variant needs its own entry, since matching is done on the whole key.
 *   **The `note` field is a silent instruction read by the translator engine, not free commentary.** Keep it under ~15 words and put only three things, separated by `;`:
     1. grammatical gender of the RUSSIAN keyword — exactly `Муж.`, `Жен.`, `Ср.`, or `мн.` for plural-only terms. Required for people, creatures, gods, and for nouns whose gender is not obvious from the ending.
     2. who or what the entity is — 2–6 words (`тёмный маг, отец Кассандры`).
-    3. declension — exactly `Скл.` or `Нескл.` — whenever a wrong ending is plausible (personal names, surnames, toponyms, titles). Add the case forms in parentheses when they matter: `Скл. (Душара, Душару, Душаром)`.
+    3. declension — exactly `Скл.` or `Нескл.` — whenever a wrong ending is plausible (personal names, surnames, toponyms, titles). Write **only the tag, nothing else**: never list case forms (`Скл. (Душара, Душару, Душаром)`), agreement forms (`(эллюзийский, эллюзийская, эллюзийские)`) or sample phrases. The engine derives the endings from the tag itself; every extra form you write is fed back verbatim and starts surfacing in the text.
     Use exactly these tag spellings (`Муж.`, `Жен.`, `Ср.`, `мн.`, `Скл.`, `Нескл.`) — the engine recognizes them and explains them to the translator model.
 *   **Never write a rejected or doubtful spelling into `note`** — no `НЕ «манадерево»`, no `не «царствование»`, no lists of variants. Everything in `note` is fed back verbatim into the next translation and starts appearing there. State the correct form positively: `всегда «правление»`.
 *   **Never write translator bookkeeping into `note`:** chapter numbers, occurrence counts, "canon", "rulate", "check later", doubts, alternatives. Only what changes the Russian text.
-*   Examples: `{"original":"Duchar","rus":"Душар","note":"Муж.; тёмный маг, отец Кассандры; Скл. (Душара, Душару)"}`, `{"original":"Silk","rus":"Шёлк","note":"Жен.; контактёр Паутины; Нескл."}`, `{"original":"Brand of Sloth","rus":"Клеймо Лени","note":"Ср.; клеймо Владыки"}`.
+*   Examples: `{"original":"Duchar","rus":"Душар","note":"Муж.; тёмный маг, отец Кассандры; Скл."}`, `{"original":"Silk","rus":"Шёлк","note":"Жен.; контактёр Паутины; Нескл."}`, `{"original":"Brand of Sloth","rus":"Клеймо Лени","note":"Ср.; клеймо Владыки"}`.
 *   **Default is silence.** If nothing qualifies, output NOTHING after `</html>` — an empty tail is a perfectly valid result. Zero entries is normal; do not invent filler.
 *   The comment is stripped from the translation before assembly, so it never reaches the reader.
 *   Never put this comment before `</html>`, never duplicate it.
