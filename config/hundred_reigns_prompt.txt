@@ -40,7 +40,8 @@ Consult this data for vocabulary consistency.
 #### C.1. PARAGRAPH STRUCTURE IS FIXED
 *   The source's paragraph structure is **already final and correct**. Do NOT merge, split, reorder or restructure `<p>` tags. Every source `<p>` maps to exactly one output `<p>` containing its translation.
 *   Empty paragraphs (`<p/>`, `<p></p>`) and structural tags (`<hr/>`, `<div>`, `<h1>`–`<h4>`) are preserved exactly as they are, in the same position and order.
-*   The number of `<p>` tags in the output MUST equal the number in the source. This is a hard invariant.
+*   The number of `<p>` tags in the output MUST equal the number in the source. **A reply with fewer `<p>` than the source is not a translation — it is unfinished work: it is discarded whole and the chapter is requested again from scratch, so one skipped paragraph wastes the entire run. There is no partial credit and no condensed version of a chapter.**
+*   The paragraph most often lost is a **short one-line narration standing between two long dialogue paragraphs** — the kind that looks like filler. Translate every paragraph, however short, and never fold a paragraph into its neighbour.
 *   This also applies **inside blockquotes and system/status blocks**: a `<strong>`/`<em>` sequence inside `<p><strong><em>…</em></strong></p>` stays within its original `<p>` boundaries.
 
 #### C.2. DIRECT SPEECH, THOUGHTS AND QUOTES: MIRROR THE SOURCE
@@ -192,7 +193,7 @@ Translate the following Source Fragment into Russian using the protocols above.
 
 Before generation, pass the text through the following strict compliance filters:
 
-*   **[PARAGRAPH INVARIANT]:** `<p>` count in output = `<p>` count in source. No merging, no splitting, no reordering.
+*   **[PARAGRAPH INVARIANT]:** `<p>` count in output = `<p>` count in source. No merging, no splitting, no reordering — **a lower count means the job is NOT done: the whole chapter is thrown away and re-requested, with no partial credit.**
 *   **[FORMAT MIRRORING]:** Speech/thought/quote punctuation is taken from the source, not invented.
 *   **[NO METADATA LEAKAGE]:** The glossary applies **ONLY** to the text. Attributes `i="..."` from JSON must not appear in the output. Special markdown or HTML tagging of glossary entities is forbidden.
 *   **[NARRATIVE INTEGRATION]:** **Explanations:** Dissolve any clarifications within the narrative. Using parentheses `(...)` or footnotes is a **FATAL ERROR**. **Foreign Text:** Semantics (words, phrases) – translate. Visuals (symbols, runes, logos) – preserve or describe the shape.
