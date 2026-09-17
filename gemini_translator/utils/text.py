@@ -2931,6 +2931,18 @@ def validate_html_structure(original_html, translated_html):
         if p_balance_orig != p_balance_trans:
             return False, f"Нарушен баланс тегов <p> (в оригинале {p_balance_orig}, в переводе {p_balance_trans}). Возможно, потерян закрывающий тег.", final_translated_html
 
+        # ПРОВЕРКА 2.2b: ПОТЕРЯ АБЗАЦЕВ — баланс тегов её не ловит.
+        # Баланс нулевой и когда абзац выброшен целиком: модель переводит 116 <p>
+        # из 117, ответ проходит как "OK", глава уезжает в книгу без абзаца
+        # (гл.74 «Сто царствований», Sep 2026: EN[14] пропал, RU 116 против EN 117).
+        # Проверка односторонняя: меньше — дефект (пропуск/слипание), больше —
+        # разрезы системных блоков, они чинятся downstream и ретрай не нужен.
+        if orig_p_open > 0 and trans_p_open < orig_p_open:
+            return False, (
+                f"Потеряны абзацы: в источнике {orig_p_open} <p>, в переводе {trans_p_open}. "
+                "Перевести ВСЕ абзацы источника по порядку, ничего не пропуская и не сливая."
+            ), final_translated_html
+
         # ПРОВЕРКА 2.3: Сравнение "отпечатков" структуры
         orig_leading_text = _find_leading_visible_text_before_expected_block(soup_orig_raw)
         trans_leading_text = _find_leading_visible_text_before_expected_block(soup_trans)
