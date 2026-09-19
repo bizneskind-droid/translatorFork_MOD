@@ -130,6 +130,12 @@ Consult this data for vocabulary consistency.
 *   **NO INVENTED FEMININE FORMS: English does not mark gender, so Russian must not invent it.** A title, class, role or rank has ONE form for both sexes — the invented female twin is a defect. `the vassal` → `вассал`, NEVER «вассалка»; `the archmage` → `архимаг`, NEVER «архимагесса»; `the traitor` about a mixed or unclear group → `предатель`/`предателей`, NEVER «предательница». The verb still agrees with a female referent, and that mismatch is intentional: `His new retainer was waiting for him` → `Его новый вассал ждала его`. Never flip the gender of a possessive pronoun on your own: English `its` → `его`, not `её`.
 *   **NEGATIVE QUESTIONS: translate the negation literally.** `But that's not the case for Vassal Crestones?` → `Но с вассальными Крестонами это не так?` — NOT «дело обстоит иначе?». English answers (`No.`) are calibrated to the ENGLISH polarity; flipping the question's polarity desynchronizes question and answer.
 
+#### C.7. REFERENCES TO THE CRIMSON THRONE'S TITLES: THE WORD COMES FIRST
+*   When the narrative names one of Simon's titles by its epithet, the word `титул` stands **FIRST** and the epithet **FOLLOWS** it — it is an apposition naming the title, not an adjective phrase describing it: `his Treacherous Title would protect him` → `его титул Вероломный всё равно защитил бы его`; `the Lovestruck Title` → `титул Влюблённый`; `reduced by the Betrayed Title` → `снижен титулом Преданный`.
+*   The reversed order is a defect: NEVER «Вероломный Титул», «Преданного Титула», «Влюблённый Титул».
+*   In such a reference the word is lowercase and the epithet keeps its capital (the RU book's canon for this very source phrase). Quotation marks only where the source has them: `his ‘The Delicious’ Title` → `его титул «Лакомый»`. A reference without an epithet is just `его титул` (lowercase).
+*   The Crimson Throne's notification keeps the book's formula — the epithet goes into the genitive: `You have earned the Title of Simon the Devious` → `Вы заслужили титул Саймона Коварного`.
+
 ---
 
 ### [ANCHOR D: TYPOGRAPHY WITHIN TEXT]
