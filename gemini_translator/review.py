@@ -68,6 +68,27 @@ def count_paragraphs(html_text: str) -> int:
     return len(re.findall(r"<p[^>]*>", html_text, re.I))
 
 
+def source_paragraph_count(epub_path: str, chapter_rel: str) -> int:
+    """Paragraph count of the RAW source chapter.
+
+    This is the count the book assembly needs: the translated chapter is spliced
+    against the source chapter paragraph by paragraph. It is therefore the only
+    count a stage may legitimately converge to when the incoming file carries
+    torn paragraphs (a `<strong>` split across `<p>` boundaries, `…` fragments).
+    """
+    with zipfile.ZipFile(epub_path) as z:
+        names = z.namelist()
+        target = chapter_rel if chapter_rel in names else None
+        if target is None:
+            base = os.path.basename(chapter_rel)
+            matches = [n for n in names if os.path.basename(n) == base]
+            if not matches:
+                raise FileNotFoundError(f"нет {chapter_rel} в {epub_path}")
+            target = matches[0]
+        raw = z.read(target).decode("utf-8", "replace")
+    return count_paragraphs(raw)
+
+
 # --------------------------------------------------------------------- glossary
 
 def scope_glossary(glossary: dict[str, dict], cn_text: str,
@@ -248,6 +269,11 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
     cn_text = cn_chapter_text(cn_epub, chapter_rel)
     entries = scope_glossary(glossary, cn_text)
     src_paras = count_paragraphs(translated_html)
+    # The source chapter's own count — the target a torn input may converge to.
+    try:
+        en_paras = source_paragraph_count(cn_epub, chapter_rel)
+    except Exception:
+        en_paras = src_paras
 
     prompt = prompt_template
     for key, value in (("{glossary}", format_glossary(entries)),
@@ -263,7 +289,10 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
     # reasoning_effort=none, i.e. ~20-25k tokens BEFORE any content: at the old
     # cap (len/2 ≈ 23k) the model returns empty content with
     # finish_reason=max_tokens. So the cap must cover reasoning + content.
-    budget = max(32000, len(translated_html))
+    # Gl.79 (2026-09-19): polish burned 98k reasoning chars (~30k tokens) on a
+    # 34k-char chapter and still hit the 32k cap -> budget raised to 64k (the
+    # model's max_output_tokens) instead of len(html).
+    budget = max(64000, len(translated_html))
 
     try:
         reply = call_model(endpoint, headers, model_id, prompt, budget, timeout)
@@ -278,18 +307,25 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
         return {"chapter": chapter_rel, "ok": False, "status": "empty_reply",
                 "glossary_terms": len(entries), "reply_head": reply[:200]}
 
-    if out_paras != src_paras:
-        # Paragraph count is the one invariant EPUB assembly depends on.
+    # Paragraph count is the one invariant EPUB assembly depends on: the count
+    # must be the incoming file's, or — when the input arrived torn (extra <p>
+    # from split tags, `…` fragments) — the source chapter's own count, which is
+    # what assembly splices against. Growing past the input is always rejected.
+    merged = src_paras - out_paras if out_paras < src_paras else 0
+    if out_paras != src_paras and not (merged > 0 and out_paras == en_paras):
         return {"chapter": chapter_rel, "ok": False,
                 "status": "paragraph_mismatch",
                 "source_paragraphs": src_paras, "review_paragraphs": out_paras,
+                "en_paragraphs": en_paras,
                 "glossary_terms": len(entries)}
 
+    counts_match = out_paras == src_paras
     changed = cleaned.strip() != translated_html.strip()
-    edits = diff_paragraphs(translated_html, cleaned) if changed else []
+    edits = diff_paragraphs(translated_html, cleaned) if (changed and counts_match) else []
     return {"chapter": chapter_rel, "ok": True,
             "status": "changed" if changed else "unchanged",
             "source_paragraphs": src_paras, "review_paragraphs": out_paras,
+            "en_paragraphs": en_paras, "merged_paragraphs": merged,
             "glossary_terms": len(entries),
             "cn_chars": len(cn_text),
             "edit_count": len(edits),
