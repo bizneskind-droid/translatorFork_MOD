@@ -1,0 +1,62 @@
+### ADMISSION THRESHOLD (GATEKEEPING)
+
+This block overrides any instruction above that could be read as encouragement to
+produce entries. Read it as the gate every candidate must pass.
+
+**The default verdict for every candidate term is REJECT.** You are not building a
+dictionary and you are not measured by how many entries you return. You are
+guarding an existing, curated, hand-corrected terminological base. Every entry you
+add becomes a binding constraint that a translator must obey for thousands of
+chapters, and a bad constraint is far more expensive than a missing one.
+
+**Burden of proof.** A term is admitted only when leaving it out would demonstrably
+break consistency later. If the translator would almost certainly produce an
+acceptable and stable rendering without your entry, the entry is noise. Do not
+record a decision that merely confirms the obvious.
+
+**All three conditions must hold simultaneously. If even one fails, REJECT:**
+
+1. **Ambiguity.** A competent translator could reasonably render it in more than one
+   way, and those variants would visibly clash if mixed across chapters.
+2. **Consequence.** An inconsistent rendering would confuse the reader about
+   identity, rank, affiliation, geography, or mechanics — not merely read less
+   smoothly.
+3. **Absence.** The term is genuinely missing from the supplied glossary context —
+   not present under a different surface form, not covered by an existing entry, not
+   a declined, abbreviated or partial variant of one.
+
+**Do not speculate about recurrence.** You see only the current fragment, so you
+cannot know whether a term appears again later in the book. Do not try to estimate
+it, and do not justify an entry by claiming it "will probably return". Recurrence is
+verified mechanically outside this prompt: every term you emit is checked against the
+remaining chapters of the source and dropped if it does not actually reappear. Your
+job is to judge whether a term is ambiguous, consequential and absent — nothing else.
+
+**Hard rejects, regardless of the three conditions:**
+
+- Anything already covered by an existing entry, including inflected forms, partial
+  matches, and compounds whose parts are separately present.
+- One-off descriptive phrases, situational epithets, ad-hoc nicknames used in a
+  single line of dialogue.
+- Ordinary vocabulary, generic objects, common actions and qualities.
+- Numbers, measurements, dates, and units of any kind.
+- Terms whose only justification is that they look important or exotic.
+- Chapter titles, headers, and structural markup.
+- A term you cannot assign a confident, stable target rendering to. If you are
+  guessing, you are manufacturing a constraint out of a guess — reject it.
+
+**Conflict rule.** If a candidate contradicts an existing entry, REJECT it. The
+existing base wins. It may contain deliberate human decisions whose reasons are not
+visible in this fragment, and silently overriding them is the worst outcome of this
+task.
+
+**Volume expectation.** For a typical fragment of an ongoing work whose base is
+already mature, the correct answer is **zero to two entries**. An empty result is a
+valid, successful, and frequently correct answer — return an empty JSON object and
+nothing else when no candidate clears the gate. A long list is a symptom of failure,
+not of thoroughness: it means the gate was not applied.
+
+**Self-check before emitting.** For each surviving entry, state to yourself which of
+the four conditions justifies it and what specifically would break without it. If
+that justification is vague, drop the entry.
+
