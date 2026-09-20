@@ -169,6 +169,10 @@ def build_headers(provider_id: str, api_key: str | None) -> dict[str, str]:
     return headers
 
 
+class EmptyContentError(RuntimeError):
+    """DS4F выжег бюджет на reasoning и вернул пустой content."""
+
+
 def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
                max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
     # DS4F reasoning drift (2026-09-11): reasoning is now the default upstream
@@ -207,7 +211,7 @@ def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
         # content comes back empty with finish_reason=max_tokens. Report that
         # plainly instead of letting it surface as a nameless empty_reply.
         reasoning = (choice.get("message") or {}).get("reasoning_content") or ""
-        raise RuntimeError(
+        raise EmptyContentError(
             "пустой content (finish_reason=%s, reasoning_chars=%d, max_tokens=%s)"
             % (choice.get("finish_reason"), len(reasoning), max_tokens))
     return content
@@ -290,24 +294,33 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
     # DS4F (2026-09-19) emits 70k+ chars of reasoning per full chapter even with
     # reasoning_effort=none, i.e. ~20-25k tokens BEFORE any content: at the old
     # cap (len/2 ≈ 23k) the model returns empty content with
-    # finish_reason=max_tokens. So the cap must cover reasoning + content.
-    # Gl.79 (2026-09-19): polish burned 98k reasoning chars (~30k tokens) on a
-    # 34k-char chapter and still hit the 32k cap -> budget raised to 64k (the
-    # model's max_output_tokens) instead of len(html).
-    budget = max(64000, len(translated_html))
+    # finish_reason=max_tokens.
+    # Gl.85 (2026-09-20, measured): the opposite cap is just as bad — at 64k the
+    # same prompt burns 198-205k reasoning chars and returns empty content,
+    # while at 24k the identical call answers in 34s with reasoning_chars=0
+    # (content 9.4k tokens). So the cap is held near 24k, and an overrun is
+    # retried: the failure is not deterministic (gl.85 review passed on the 3rd
+    # attempt, polish on the 2nd, same input).
+    budget = min(24000, max(16000, len(translated_html)))
 
-    # One call, no re-ask. A torn input normally never reaches this stage: the hr
-    # pipeline repairs it deterministically right after translation
-    # (skills/.../hundred-reigns-mt/scripts/repair_tears.py), because a second
-    # pass over a full torn chapter burned the whole 64k token budget on
-    # reasoning twice in a row and returned empty content
-    # (finish_reason=max_tokens, reasoning_chars 207k-212k). The count guard
-    # below is the net, not the path.
-    try:
-        reply = call_model(endpoint, headers, model_id, prompt, budget, timeout)
-    except Exception as exc:
+    # One call per attempt, no re-ask for paragraph counts (a torn input never
+    # reaches this stage: the hr pipeline repairs it deterministically with
+    # skills/.../hundred-reigns-mt/scripts/repair_tears.py).
+    last_error = None
+    reply = None
+    for _attempt in range(3):
+        try:
+            reply = call_model(endpoint, headers, model_id, prompt, budget, timeout)
+            break
+        except EmptyContentError as exc:
+            last_error = exc
+            continue
+        except Exception as exc:
+            return {"chapter": chapter_rel, "ok": False, "status": "api_error",
+                    "error": str(exc), "glossary_terms": len(entries)}
+    if reply is None:
         return {"chapter": chapter_rel, "ok": False, "status": "api_error",
-                "error": str(exc), "glossary_terms": len(entries)}
+                "error": "3 попытки: %s" % last_error, "glossary_terms": len(entries)}
 
     cleaned = extract_html(reply)
     out_paras = count_paragraphs(cleaned)
