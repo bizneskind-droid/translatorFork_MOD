@@ -279,6 +279,8 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
     for key, value in (("{glossary}", format_glossary(entries)),
                        ("{rules}", project_rules or "(дополнительных правил нет)"),
                        ("{source}", cn_text),
+                       ("{input_paras}", str(src_paras)),
+                       ("{source_paras}", str(en_paras)),
                        ("{text}", translated_html)):
         if key in prompt:
             prompt = prompt.replace(key, value)
