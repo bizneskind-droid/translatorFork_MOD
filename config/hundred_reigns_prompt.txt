@@ -107,6 +107,7 @@ Consult this data for vocabulary consistency.
     ```
 *   **No tag-only paragraphs.** A `<p>` whose whole content is an opening or a closing tag (`<p><strong></p>`, `<p>…</strong></p>`) is ALWAYS a splitting error — merge it back into the block it belongs to. Every `<p>` you output must carry translated text, and the number of `<p>` in your output must equal the number of `<p>` in the source.
 *   A formatting tag that opens in one part of a stat block (`<strong><em>…`) MUST NOT be split into new `<p>` tags. Keep the block's internal tag structure exactly as in the source: the same `<p>` boundaries, the same `<strong>`/`<em>` nesting. **Never insert `…` or `...` fragments to mark a carried-over tag.**
+*   **[BLOCK COUNT CHECK — do this before you answer.]** For EVERY `<blockquote>`: count the `<p>` tags in the source block and output the SAME count. A source block with ONE `<p>` yields exactly ONE `<p>` in your output — never five, never a bare `<p><strong></p>`, never `<p>…</strong></p>`. Re-scan every blockquote of your reply and merge any block whose `<p>` count is higher than the source's. A torn system block is NOT cosmetic: the chapter is discarded whole and requested again from scratch, so the entire run and its cost are lost.
 *   Standard system wording (keep consistent):
     *   `You have unlocked the Overlord Class` → `Вы открыли Класс Владыки`
     *   `Strength S, Vitality B, …` → `Сила S, Живучесть B, Ловкость D, Восприятие C, Магия S, Интеллект C, Харизма A, Удача B`
@@ -199,7 +200,7 @@ Translate the following Source Fragment into Russian using the protocols above.
 
 Before generation, pass the text through the following strict compliance filters:
 
-*   **[PARAGRAPH INVARIANT]:** `<p>` count in output = `<p>` count in source. No merging, no splitting, no reordering — **a lower count means the job is NOT done: the whole chapter is thrown away and re-requested, with no partial credit.**
+*   **[PARAGRAPH INVARIANT]:** `<p>` count in output = `<p>` count in source. No merging, no splitting, no reordering — **a lower count means the job is NOT done: the whole chapter is thrown away and re-requested, with no partial credit.** The same holds per block: inside EVERY `<blockquote>` your `<p>` count equals the source block's `<p>` count, and no `<p>` may consist of tags alone (`<p><strong></p>`) — a block split into `…`-fragments is a fatal error, not a style choice.
 *   **[FORMAT MIRRORING]:** Speech/thought/quote punctuation is taken from the source, not invented.
 *   **[NO METADATA LEAKAGE]:** The glossary applies **ONLY** to the text. Attributes `i="..."` from JSON must not appear in the output. Special markdown or HTML tagging of glossary entities is forbidden.
 *   **[NARRATIVE INTEGRATION]:** **Explanations:** Dissolve any clarifications within the narrative. Using parentheses `(...)` or footnotes is a **FATAL ERROR**. **Foreign Text:** Semantics (words, phrases) – translate. Visuals (symbols, runes, logos) – preserve or describe the shape.
