@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import datetime
 import fnmatch
 import json
 import os
+import re
+import shutil
 import sys
 import threading
 import time
@@ -901,6 +904,445 @@ def command_build_epub(args) -> dict:
     }
 
 
+def _chapter_order_key(rel_path: str) -> tuple:
+    """Sort chapters the way the book reads: numerically when the file name
+    carries a chapter number, alphabetically otherwise."""
+    name = os.path.basename(str(rel_path))
+    digits = re.findall(r"\d+", name)
+    if digits:
+        return (0, int(digits[-1]), name)
+    return (1, 0, name)
+
+
+def _chapter_number(rel_path: str) -> int | None:
+    digits = re.findall(r"\d+", os.path.basename(str(rel_path)))
+    return int(digits[-1]) if digits else None
+
+
+def _count_terms_ahead(epub_path: str, terms: list[str], processed: list[str],
+                       limit: int = 0) -> dict[str, dict]:
+    """Count occurrences of each term in the chapters that come AFTER the
+    processed ones.
+
+    This is the mechanical answer to "will this term come back?" — the model
+    only ever sees the current package, so recurrence cannot be judged from
+    the prompt. Here the rest of the source book is actually scanned.
+    """
+    if not terms:
+        return {}
+
+    processed_set = {str(p) for p in processed}
+    numbers = [n for n in (_chapter_number(p) for p in processed_set) if n is not None]
+    last_processed = max(numbers) if numbers else None
+
+    with zipfile.ZipFile(epub_path) as zf:
+        candidates = [
+            n for n in zf.namelist()
+            if n.lower().endswith((".xhtml", ".html", ".htm"))
+        ]
+        candidates.sort(key=_chapter_order_key)
+
+        ahead = []
+        for name in candidates:
+            if name in processed_set:
+                continue
+            num = _chapter_number(name)
+            if last_processed is not None:
+                if num is None or num <= last_processed:
+                    continue
+            ahead.append(name)
+        if limit and limit > 0:
+            ahead = ahead[:limit]
+
+        stats = {t: {"count": 0, "chapters": []} for t in terms}
+        for name in ahead:
+            try:
+                raw = zf.read(name).decode("utf-8", "replace")
+            except Exception:
+                continue
+            for term in terms:
+                hits = raw.count(term)
+                if hits:
+                    stats[term]["count"] += hits
+                    stats[term]["chapters"].append(os.path.basename(name))
+
+    for term in stats:
+        stats[term]["scanned_chapters"] = len(ahead)
+    return stats
+
+
+def _glossary_entries_as_list(glossary: dict) -> list:
+    """Convert the {original: {rus, note}} shape into the list shape the
+    glossary engine expects for initial_glossary_list."""
+    out = []
+    for original, entry in (glossary or {}).items():
+        if not original:
+            continue
+        out.append({
+            "original": str(original),
+            "rus": str((entry or {}).get("rus") or ""),
+            "note": str((entry or {}).get("note") or ""),
+        })
+    return out
+
+
+def _merge_into_authoritative(path: str, new_terms: list) -> dict:
+    """Supplement-merge new terms into the authoritative glossary JSON.
+
+    Existing entries always win: this file carries hand-made decisions and the
+    generator must never silently overwrite them. Returns merge stats.
+    """
+    existing = _load_json_file(path, default=[])
+    if not isinstance(existing, list):
+        raise CliError(f"Authoritative glossary must be a JSON list: {path}")
+
+    known = {
+        str(e.get("original", "")).strip().lower()
+        for e in existing if isinstance(e, dict) and e.get("original")
+    }
+    added = []
+    for term in new_terms:
+        if not isinstance(term, dict):
+            continue
+        original = str(term.get("original") or "").strip()
+        key = original.lower()
+        if not original or key in known:
+            continue
+        known.add(key)
+        added.append({
+            "original": original,
+            "rus": str(term.get("rus") or ""),
+            "note": str(term.get("note") or ""),
+            "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+        })
+
+    if added:
+        backup = f"{path}.bak-glossary-{int(time.time())}"
+        shutil.copy2(path, backup)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(existing + added, fh, ensure_ascii=False, indent=2)
+    else:
+        backup = None
+
+    return {
+        "existing": len(existing),
+        "added": len(added),
+        "total": len(existing) + len(added),
+        "backup": backup,
+        "added_terms": added,
+    }
+
+
+def command_glossary(args) -> dict:
+    """Extract new glossary terms from chapters using the program's own
+    glossary engine (glossary_batch_task), then optionally supplement the
+    authoritative glossary file.
+
+    This reuses the existing engine rather than reimplementing extraction:
+    the same GlossaryBatchProcessor, prompt builder and SQLite store the GUI
+    uses. The CLI only had no entry point for it.
+    """
+    runtime = HeadlessRuntime()
+    app = runtime.bootstrap(include_engine=True)
+    try:
+        project_folder = _abs_path(args.project)
+        epub_path = _abs_path(args.epub)
+        pm = _project_manager(project_folder)
+        chapters = select_chapters(
+            epub_path,
+            pm,
+            mode=args.chapters,
+            patterns=args.chapter or [],
+            offset=args.offset,
+            limit=args.limit,
+        )
+        if not chapters:
+            runtime.shutdown()
+            return {"ok": True, "status": "no_chapters", "epub": epub_path}
+
+        settings = build_session_settings(app.settings_manager, pm, chapters, args)
+
+        # Glossary generation prompt: the dedicated generator prompt, not the
+        # translation prompt. --prompt-file would have been consumed as the
+        # translation prompt by build_session_settings, so read it separately.
+        gen_prompt = _load_text_file(getattr(args, "glossary_prompt_file", None))
+        if gen_prompt is None:
+            api_config = _ensure_api_config_initialized()
+            gen_prompt = api_config.default_glossary_prompt()
+        if not gen_prompt:
+            raise CliError("No glossary generation prompt available.")
+
+        # Conservative gate appended last so it overrides earlier encouragement
+        # to produce entries.
+        admission = _load_text_file(getattr(args, "admission_file", None))
+        if admission:
+            gen_prompt = f"{gen_prompt.rstrip()}\n\n{admission.strip()}\n"
+
+        merge_mode = args.merge_mode or "supplement"
+        settings.update({
+            "glossary_generation_prompt": gen_prompt,
+            "glossary_merge_mode": merge_mode,
+            "initial_glossary_list": _glossary_entries_as_list(
+                settings.get("full_glossary_data") or {}),
+            "new_terms_limit": int(args.new_terms_limit or 0),
+            "send_notes_in_sequence": True,
+        })
+
+        plan = build_task_plan(epub_path, chapters, settings, pm)
+        if not plan.payloads:
+            runtime.shutdown()
+            return {"ok": True, "status": "no_tasks", "epub": epub_path,
+                    "plan": plan.summary}
+
+        # Rewrite translation payloads into glossary tasks, exactly as the GUI
+        # does in ai_generation.py.
+        glossary_tasks = []
+        for payload in plan.payloads:
+            task_type = payload[0]
+            if task_type == "epub":
+                glossary_tasks.append(
+                    ("glossary_batch_task", payload[1], (payload[2],), {}))
+            elif task_type == "epub_batch":
+                glossary_tasks.append(
+                    ("glossary_batch_task", payload[1], payload[2], {}))
+        if not glossary_tasks:
+            runtime.shutdown()
+            return {"ok": False, "status": "unsupported_task_shape",
+                    "detail": sorted({p[0] for p in plan.payloads})}
+
+        app.task_manager.set_pending_tasks(glossary_tasks)
+
+        observer = CliSessionObserver(
+            app, verbose=bool(args.verbose), timeout_sec=args.timeout)
+
+        def start_session():
+            app.event_bus.event_posted.emit({
+                "event": "start_session_requested",
+                "source": "cli",
+                "data": {"settings": settings},
+            })
+
+        app.event_bus.set_data("cli_session_active", True)
+        runtime.app_main.QtCore.QTimer.singleShot(0, start_session)
+        app.exec()
+        app.event_bus.pop_data("cli_session_active", None)
+
+        result = observer.result_payload(app.task_manager)
+
+        # Terms landed in the project SQLite store; read them back.
+        try:
+            produced = app.task_manager.fetch_and_clean_glossary(mode=merge_mode)
+        except Exception as exc:
+            produced = []
+            result["glossary_read_error"] = str(exc)
+
+        known_before = {
+            str(k).strip().lower()
+            for k in (settings.get("full_glossary_data") or {})
+        }
+        fresh = [t for t in produced
+                 if str(t.get("original", "")).strip().lower() not in known_before]
+
+        # --- Recurrence gate, measured against the rest of the book ---------
+        # The model only ever sees the current package, so it cannot know
+        # whether a term comes back. Scan the following chapters and keep only
+        # terms that actually reappear.
+        min_ahead = int(getattr(args, "min_ahead", 0) or 0)
+        ahead_stats = {}
+        accepted, rejected = fresh, []
+        if min_ahead > 0 and fresh:
+            originals = [str(t.get("original") or "").strip()
+                         for t in fresh if t.get("original")]
+            ahead_stats = _count_terms_ahead(
+                epub_path, originals, chapters,
+                limit=int(getattr(args, "ahead_limit", 0) or 0),
+            )
+            accepted, rejected = [], []
+            for term in fresh:
+                original = str(term.get("original") or "").strip()
+                stat = ahead_stats.get(original, {})
+                hits = int(stat.get("count", 0))
+                term["ahead_count"] = hits
+                term["ahead_chapters"] = stat.get("chapters", [])[:8]
+                (accepted if hits >= min_ahead else rejected).append(term)
+
+        payload = {
+            "ok": bool(result["finished"] and not result["timed_out"]),
+            "status": "finished" if result["finished"] else "stopped",
+            "epub": epub_path,
+            "project": project_folder,
+            "merge_mode": merge_mode,
+            "chapters": len(chapters),
+            "tasks": len(glossary_tasks),
+            "terms_in_store": len(produced),
+            "new_terms": len(fresh),
+            "min_ahead": min_ahead,
+            "scanned_ahead": (next(iter(ahead_stats.values()), {})
+                              .get("scanned_chapters", 0) if ahead_stats else 0),
+            "accepted": len(accepted),
+            "rejected": len(rejected),
+            "terms": accepted,
+            "rejected_terms": rejected,
+            "plan": plan.summary,
+            "result": result,
+        }
+
+        export_to = getattr(args, "export_to", None)
+        if export_to and accepted:
+            payload["export"] = _merge_into_authoritative(_abs_path(export_to), accepted)
+        elif export_to:
+            payload["export"] = {"added": 0, "note": "no terms passed the recurrence gate"}
+
+        runtime.shutdown()
+        return payload
+    except BaseException:
+        runtime.shutdown()
+        raise
+
+
+def command_review(args) -> dict:
+    """Verify finished translations of a package against the CN source.
+
+    Reads the translated HTML that `translate` wrote into the project folder,
+    checks each chapter against the original with a dedicated review prompt, and
+    writes a corrected copy next to it. Nothing is inserted into any EPUB here --
+    that stays a separate, explicit step.
+    """
+    from . import review as review_mod
+
+    runtime = HeadlessRuntime()
+    app = runtime.bootstrap(include_engine=False)
+    try:
+        project_folder = _abs_path(args.project)
+        epub_path = _abs_path(args.epub)
+        pm = _project_manager(project_folder)
+
+        chapters = select_chapters(
+            epub_path,
+            pm,
+            mode=args.chapters,
+            patterns=args.chapter or [],
+            offset=args.offset,
+            limit=args.limit,
+        )
+        if not chapters:
+            raise CliError("No chapters selected for review.")
+
+        prompt_template = _load_text_file(args.prompt_file)
+        if not prompt_template:
+            raise CliError("--prompt-file is required for review.")
+        for token in ("{source}", "{text}"):
+            if token not in prompt_template:
+                raise CliError(f"Review prompt is missing the {token} placeholder.")
+
+        # Optional per-novel rules injected into the universal prompt's {rules}
+        # block. Keeps the prompt itself language- and book-agnostic.
+        project_rules = _load_text_file(args.rules_file) or ""
+
+        glossary = load_project_glossary(project_folder, args.glossary)
+
+        api_config = _ensure_api_config_initialized()
+        saved_settings = app.settings_manager.load_settings() or {}
+        provider_id = _resolve_provider(api_config, saved_settings, args.provider)
+        model_name, model_config = _resolve_model(
+            api_config, provider_id, saved_settings, args.model
+        )
+        provider_conf = api_config.api_providers().get(provider_id) or {}
+        endpoint = review_mod.resolve_endpoint(provider_id, provider_conf)
+        keys = _resolve_api_keys(
+            api_config, app.settings_manager, provider_id, saved_settings, args
+        )
+        headers = review_mod.build_headers(provider_id, keys[0] if keys else None)
+        model_id = model_config.get("id") or model_name
+
+        suffix = _resolve_build_suffix(args) or provider_conf.get("file_suffix")
+
+        results = []
+        for chapter_rel in chapters:
+            # Same lookup build_epub uses, so review reads exactly the file that
+            # assembly would pick up.
+            versions = pm.get_versions_for_original(chapter_rel)
+            rel_path = _choose_translation_rel_path(versions, suffix)
+            if not rel_path:
+                rel_path = _choose_translation_rel_path(versions)
+            if not rel_path:
+                results.append({"chapter": chapter_rel, "ok": False,
+                                "status": "no_translation"})
+                continue
+
+            src_file = os.path.join(project_folder, rel_path)
+            if not os.path.exists(src_file):
+                results.append({"chapter": chapter_rel, "ok": False,
+                                "status": "missing_file", "path": src_file})
+                continue
+
+            translated_html = Path(src_file).read_text(encoding="utf-8")
+            res = review_mod.review_chapter(
+                cn_epub=epub_path,
+                chapter_rel=chapter_rel,
+                translated_html=translated_html,
+                glossary=glossary,
+                prompt_template=prompt_template,
+                endpoint=endpoint,
+                headers=headers,
+                model_id=model_id,
+                project_rules=project_rules,
+                timeout=args.timeout or review_mod.DEFAULT_TIMEOUT,
+            )
+
+            if res.get("ok") and res.get("html"):
+                if args.apply:
+                    # Overwrite the translation in place. This is what makes the
+                    # reviewed text reach the EPUB: add_new_chapters.py discovers
+                    # files by chap_<n>_translated_<suffix>.html, and \w+ also
+                    # matches "gl_reviewed", so leaving a second candidate in the
+                    # insertion folder would let os.listdir() order decide which
+                    # version lands in the book.
+                    #
+                    # The backup must live OUTSIDE that folder for the same
+                    # reason: that script uses re.match, which is not anchored at
+                    # the end, so "chap_924_translated_gl.html.prereview" still
+                    # matches the pattern and would itself become a rival
+                    # candidate. A sibling directory keeps discovery unambiguous.
+                    backup_dir = os.path.join(project_folder, "prereview_backups")
+                    os.makedirs(backup_dir, exist_ok=True)
+                    backup = os.path.join(
+                        backup_dir, os.path.basename(src_file) + ".orig")
+                    if not os.path.exists(backup):
+                        Path(backup).write_text(translated_html, encoding="utf-8")
+                    Path(src_file).write_text(res["html"], encoding="utf-8")
+                    res["applied"] = True
+                    res["backup"] = backup
+                    res["output"] = src_file
+                else:
+                    stem, ext = os.path.splitext(src_file)
+                    out_file = f"{stem}_reviewed{ext or '.html'}"
+                    Path(out_file).write_text(res["html"], encoding="utf-8")
+                    res["applied"] = False
+                    res["output"] = out_file
+                res["source_file"] = src_file
+            res.pop("html", None)
+            results.append(res)
+
+        ok_count = sum(1 for r in results if r.get("ok"))
+        changed = sum(1 for r in results if r.get("status") == "changed")
+        return {
+            "ok": ok_count == len(results),
+            "epub": epub_path,
+            "project": project_folder,
+            "provider": provider_id,
+            "model": model_name,
+            "applied": bool(args.apply),
+            "reviewed": ok_count,
+            "changed": changed,
+            "total_edits": sum(r.get("edit_count", 0) for r in results),
+            "total": len(results),
+            "results": results,
+        }
+    finally:
+        runtime.shutdown()
+
+
 def _add_common_project_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--epub", required=True, help="Source EPUB path.")
     parser.add_argument("--project", required=True, help="Translator project/output folder.")
@@ -954,6 +1396,161 @@ def build_parser() -> argparse.ArgumentParser:
     translate.add_argument("--timeout", type=int, help="Stop the session after N seconds.")
     translate.add_argument("--verbose", action="store_true", help="Mirror app log messages to stderr.")
     translate.set_defaults(func=command_translate)
+
+    review = subparsers.add_parser("review", help="Verify finished translations against the CN source and write corrected copies.")
+    _add_common_project_args(review)
+    _add_common_run_args(review)
+    review.add_argument("--suffix", help="Explicit translation_map suffix to review.")
+    review.add_argument("--rules-file", help="Optional per-novel rules file injected into the prompt's {rules} block. Keeps the review prompt itself book-agnostic.")
+    review.add_argument("--timeout", type=int, help="Per-chapter API timeout in seconds.")
+    review.add_argument("--apply", action="store_true", help="Overwrite the translated file in place (keeps a .prereview backup) so the reviewed text is what gets inserted. Without this, writes a separate _reviewed.html for inspection.")
+    review.set_defaults(func=command_review)
+
+    glossary = subparsers.add_parser("glossary", help="Extract new glossary terms from chapters using the program's glossary engine, and optionally supplement the authoritative glossary file.")
+    _add_common_project_args(glossary)
+    _add_common_run_args(glossary)
+    glossary.add_argument("--glossary-prompt-file", help="Glossary generation prompt (defaults to config/default_glossary_prompt.txt). This is NOT the translation prompt.")
+    glossary.add_argument("--admission-file", help="Extra gatekeeping block appended to the generation prompt so terms are added only as a last resort (e.g. config/glossary_admission_threshold.txt).")
+    glossary.add_argument("--merge-mode", choices=["supplement", "update", "accumulate"], default="supplement", help="supplement (default): existing entries always win, only genuinely new terms are kept.")
+    glossary.add_argument("--new-terms-limit", type=int, default=0, help="Hard cap on new terms per task; 0 disables the cap.")
+    glossary.add_argument("--export-to", help="Authoritative glossary JSON to supplement with the new terms (a timestamped .bak is written first). Without this flag nothing outside the project folder is touched.")
+    glossary.add_argument("--min-ahead", type=int, default=0, help="Recurrence gate: keep a new term only if it occurs at least N times in the chapters AFTER the processed ones. 0 disables the gate. The model only sees the current package, so recurrence is measured here, not guessed by the model.")
+    glossary.add_argument("--ahead-limit", type=int, default=0, help="Scan at most N following chapters for the recurrence gate; 0 scans to the end of the book.")
+    glossary.add_argument("--timeout", type=int, help="Session timeout in seconds.")
+    glossary.add_argument("--verbose", action="store_true", help="Mirror app log messages to stderr.")
+    glossary.set_defaults(func=command_glossary)
+
+    def command_harvest_terms(args) -> dict:
+        """Collect <!--NEW_TERMS [...]--> tails the translator appended after
+        </html> during a translate run, strip them from the translated HTML
+        files, and optionally supplement the authoritative glossary.
+
+        The tail format is defined by the translation prompt (see the
+        GLOSSARY FEEDBACK section), so this command needs no API access: it
+        only reads what the model already wrote. Recurrence gating reuses the
+        same --min-ahead mechanics as the glossary subcommand: a term that
+        never reappears in the following chapters is rejected, because the
+        model cannot know that from its fragment alone.
+        """
+        project_folder = _abs_path(args.project)
+        epub_path = _abs_path(args.epub)
+        if not os.path.isdir(project_folder):
+            raise CliError(f"Project folder not found: {project_folder}")
+
+        tail_re = re.compile(
+            r"<!--NEW_TERMS\s*(\[.*?\])\s*-->\s*$", re.DOTALL
+        )
+        scan_root = project_folder
+        harvested: dict[str, list] = {}
+        cleaned_files: list[str] = []
+        parse_errors: list[dict] = []
+
+        for dirpath, _dirnames, filenames in os.walk(scan_root):
+            for fname in filenames:
+                if "_translated_" not in fname or not fname.endswith((".html", ".xhtml")):
+                    continue
+                fpath = os.path.join(dirpath, fname)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as fh:
+                        content = fh.read()
+                except OSError as exc:
+                    parse_errors.append({"file": fname, "error": str(exc)})
+                    continue
+                m = tail_re.search(content.rstrip() + "\n")
+                if not m:
+                    continue
+                rel = os.path.relpath(fpath, project_folder)
+                try:
+                    terms = json.loads(m.group(1))
+                    if not isinstance(terms, list):
+                        raise ValueError("not a JSON array")
+                except (ValueError, json.JSONDecodeError) as exc:
+                    parse_errors.append({"file": rel, "error": f"bad NEW_TERMS JSON: {exc}"})
+                    # Strip the malformed tail anyway so it cannot leak into the EPUB.
+                    cleaned = content[: m.start()].rstrip() + "\n"
+                    with open(fpath, "w", encoding="utf-8") as fh:
+                        fh.write(cleaned)
+                    cleaned_files.append(rel)
+                    continue
+                chapter_terms = []
+                for t in terms:
+                    if isinstance(t, dict) and str(t.get("original") or "").strip():
+                        chapter_terms.append({
+                            "original": str(t["original"]).strip(),
+                            "rus": str(t.get("rus") or "").strip(),
+                            "note": str(t.get("note") or "").strip(),
+                        })
+                if chapter_terms:
+                    harvested[rel] = chapter_terms
+                cleaned = content[: m.start()].rstrip() + "\n"
+                with open(fpath, "w", encoding="utf-8") as fh:
+                    fh.write(cleaned)
+                cleaned_files.append(rel)
+
+        # Flatten in stable file order, dropping duplicates by original key.
+        flat: list[dict] = []
+        seen: set[str] = set()
+        for rel in sorted(harvested):
+            for t in harvested[rel]:
+                key = t["original"].lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                t = dict(t)
+                t["source_file"] = rel
+                flat.append(t)
+
+        # Recurrence gate against the rest of the book (same logic as glossary).
+        min_ahead = int(getattr(args, "min_ahead", 0) or 0)
+        ahead_stats: dict = {}
+        accepted, rejected = flat, []
+        if min_ahead > 0 and flat:
+            processed = list(harvested.keys())
+            originals = [t["original"] for t in flat]
+            ahead_stats = _count_terms_ahead(
+                epub_path, originals, processed,
+                limit=int(getattr(args, "ahead_limit", 0) or 0),
+            )
+            accepted, rejected = [], []
+            for term in flat:
+                stat = ahead_stats.get(term["original"], {})
+                hits = int(stat.get("count", 0))
+                term["ahead_count"] = hits
+                term["ahead_chapters"] = stat.get("chapters", [])[:8]
+                (accepted if hits >= min_ahead else rejected).append(term)
+
+        export_to = getattr(args, "export_to", None)
+        export_result = None
+        if export_to and accepted:
+            export_result = _merge_into_authoritative(_abs_path(export_to), accepted)
+        elif export_to:
+            export_result = {"added": 0, "note": "no terms passed the recurrence gate"}
+
+        return {
+            "ok": not parse_errors,
+            "epub": epub_path,
+            "project": project_folder,
+            "scanned_translated_files": len(cleaned_files),
+            "files_with_terms": len(harvested),
+            "cleaned_files": cleaned_files,
+            "new_terms": len(flat),
+            "terms": flat,
+            "min_ahead": min_ahead,
+            "scanned_ahead": (next(iter(ahead_stats.values()), {})
+                              .get("scanned_chapters", 0) if ahead_stats else 0),
+            "accepted": len(accepted),
+            "rejected_terms": rejected,
+            "export": export_result,
+            "parse_errors": parse_errors,
+        }
+
+    harvest = subparsers.add_parser("harvest-terms", help="Collect <!--NEW_TERMS [...]--> tails appended by the translator after </html>, strip them from translated HTML files, and optionally supplement the authoritative glossary. No API calls.")
+    harvest.add_argument("--epub", required=True, help="Source EPUB, used for the recurrence gate (chapters after the harvested ones).")
+    harvest.add_argument("--project", required=True)
+    harvest.add_argument("--export-to", help="Authoritative glossary JSON to supplement with accepted terms (timestamped .bak first). Without this flag the harvest is report-only.")
+    harvest.add_argument("--min-ahead", type=int, default=0, help="Recurrence gate: keep a new term only if it occurs at least N times in the chapters AFTER the harvested ones. 0 disables the gate.")
+    harvest.add_argument("--ahead-limit", type=int, default=0, help="Scan at most N following chapters for the recurrence gate; 0 scans to the end of the book.")
+    harvest.set_defaults(func=command_harvest_terms)
 
     build_epub = subparsers.add_parser("build-epub", help="Build an EPUB by replacing source chapters with translated files.")
     build_epub.add_argument("--epub", required=True)

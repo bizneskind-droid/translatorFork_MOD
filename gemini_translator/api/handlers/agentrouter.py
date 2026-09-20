@@ -13,6 +13,7 @@ import aiohttp
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -110,6 +111,15 @@ class AgentRouterApiHandler(BaseApiHandler):
             "messages": messages,
             "stream": use_stream,
         }
+
+        # AgentRouter DS4F drift (2026-09-11): upstream runs reasoning by default;
+        # at the old 32000 max_tokens it burned the whole budget on reasoning_content
+        # and truncated content. User decision after A/B on ch.45 (2026-09-11):
+        # reasoning ON by default (better translation) + max_output_tokens=65000
+        # in api_providers.json. Set AR_DS_REASONING=0 to disable for a run.
+        if "deepseek" in str(self.worker.model_id).lower():
+            if os.environ.get("AR_DS_REASONING", "1") == "0":
+                payload["reasoning_effort"] = "none"
 
         temperature = self._temperature_payload_value()
         if temperature is not None:

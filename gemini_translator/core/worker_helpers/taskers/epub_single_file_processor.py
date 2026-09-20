@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 import zipfile
 
 from .base_processor import BaseTaskProcessor
@@ -16,6 +17,27 @@ from gemini_translator.utils.text import (
 
 
 class EpubSingleFileProcessor(BaseTaskProcessor):
+    @staticmethod
+    def _extract_new_terms_tail(raw_response):
+        """Вернуть комментарий NEW_TERMS, который модель поставила после </html>.
+
+        Промпт требует размещать хвост ПОСЛЕ закрывающего </html>, а
+        clean_html_content(..., is_html=True) отрезает всё после </body> — из-за этого
+        хвост терялся ещё до валидации и harvest-terms всегда видел пустой список.
+        """
+        match = re.search(r'<!--\s*NEW_TERMS\b.*?-->', raw_response or '', re.S)
+        return match.group(0).strip() if match else ''
+
+    def _preserve_new_terms_tail(self, raw_response, out_path):
+        tail = self._extract_new_terms_tail(raw_response)
+        if not tail:
+            return
+        with open(out_path, 'a', encoding='utf-8') as fh:
+            fh.write('\n' + tail + '\n')
+        self.worker._post_event('log_message', {
+            'message': f"[NEW_TERMS] Хвост терминов сохранён: '{os.path.basename(out_path)}'."
+        })
+
     async def _execute_json_pipeline(self, task_info, body_content, original_content, internal_chapter_path, log_prefix, use_stream):
         document_model = build_html_document_model(original_content, document_id=internal_chapter_path)
         user_prompt, _, _, source_payload = self.worker.prompt_builder.prepare_json_for_api(
@@ -110,6 +132,7 @@ class EpubSingleFileProcessor(BaseTaskProcessor):
                     original_internal_path=internal_chapter_path,
                     version_suffix=version_suffix
                 )
+                self._preserve_new_terms_tail(raw_response, out_path)
                 self.worker._post_event('log_message', {
                     'message': (
                         f"[JSON EPUB] '{os.path.basename(internal_chapter_path)}': "
@@ -192,6 +215,8 @@ class EpubSingleFileProcessor(BaseTaskProcessor):
             original_internal_path=internal_chapter_path,
             version_suffix=version_suffix
         )
+
+        self._preserve_new_terms_tail(raw_response, out_path)
 
         success_payload = self._build_success_payload(
             details_text=raw_response or cleaned_response,

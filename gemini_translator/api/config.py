@@ -74,7 +74,7 @@ def get_resource_path(relative_path: str) -> Path:
 
 _PROVIDERS_FILE = get_resource_path("config/api_providers.json")
 _PROMPT_FILE = get_resource_path("config/default_prompt.txt")
-_BASIC_TRANSLATION_PROMPT_FILE = get_resource_path("config/default_basic_translation_prompt.txt")
+_BASIC_TRANSLATION_PROMPT_FILE = get_resource_path("config/my_divine_diary_prompt.txt")
 _SEQUENTIAL_PROMPT_FILE = get_resource_path("config/default_sequential_prompt.txt")
 _GLOSSARY_PROMPT_FILE = get_resource_path("config/default_glossary_prompt.txt")
 _GENRE_GLOSSARY_PROMPT_FILE = get_resource_path("config/default_genre_promt.txt")

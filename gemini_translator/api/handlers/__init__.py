@@ -4,28 +4,32 @@
 # -----------------------------------------------------------------------------
 
 if __name__ != "__main__":
+    from .agentrouter import AgentRouterApiHandler
     from .browser import BrowserApiHandler
-    from .dry_run import DryRunApiHandler
-    from .gemini import GeminiApiHandler
-    from .huggingface import HuggingFaceApiHandler
     from .deepseek import DeepseekApiHandler
+    from .dry_run import DryRunApiHandler
+    from .duo_cli import DuoCliApiHandler
+    from .gemini import GeminiApiHandler
+    from .gumloop import GumloopApiHandler
+    from .huggingface import HuggingFaceApiHandler
     from .local import LocalApiHandler
     from .openrouter import OpenRouterApiHandler
-    from .workascii_chatgpt import WorkAsciiChatGptApiHandler
-    from .agentrouter import AgentRouterApiHandler
     from .qoder import QoderApiHandler
+    from .workascii_chatgpt import WorkAsciiChatGptApiHandler
 
     __all__ = [
+        "AgentRouterApiHandler",
         "BrowserApiHandler",
-        "DryRunApiHandler",
-        "GeminiApiHandler",
-        "HuggingFaceApiHandler",
         "DeepseekApiHandler",
+        "DryRunApiHandler",
+        "DuoCliApiHandler",
+        "GeminiApiHandler",
+        "GumloopApiHandler",
+        "HuggingFaceApiHandler",
         "LocalApiHandler",
         "OpenRouterApiHandler",
-        "WorkAsciiChatGptApiHandler",
-        "AgentRouterApiHandler",
         "QoderApiHandler",
+        "WorkAsciiChatGptApiHandler"
     ]
 
 # =============================================================================

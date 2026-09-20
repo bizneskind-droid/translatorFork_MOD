@@ -134,6 +134,7 @@ Consult this data for vocabulary consistency.
 #### C.7. REFERENCES TO THE CRIMSON THRONE'S TITLES: THE WORD COMES FIRST
 *   When the narrative names one of Simon's titles by its epithet, the word `титул` stands **FIRST** and the epithet **FOLLOWS** it — it is an apposition naming the title, not an adjective phrase describing it: `his Treacherous Title would protect him` → `его титул Вероломный всё равно защитил бы его`; `the Lovestruck Title` → `титул Влюблённый`; `reduced by the Betrayed Title` → `снижен титулом Преданный`.
 *   The reversed order is a defect: NEVER «Вероломный Титул», «Преданного Титула», «Влюблённый Титул».
+*   A Crimson Throne notification may name the title by the **bare epithet, with no word `Title` in the source at all**: `Stasis status transferred by Lovestruck.` → `Стазис передан титулом Влюблённый.` Insert the word `титул` and keep it **FIRST**, in the case the sentence requires. Two defects to avoid here: building an adjective phrase (`действием Влюблённого Титула`) and padding with `действием`/`эффектом` that the source doesn't have.
 *   In such a reference the word is lowercase and the epithet keeps its capital (the RU book's canon for this very source phrase). Quotation marks only where the source has them: `his ‘The Delicious’ Title` → `его титул «Лакомый»`. A reference without an epithet is just `его титул` (lowercase).
 *   The Crimson Throne's notification keeps the book's formula — the epithet goes into the genitive: `You have earned the Title of Simon the Devious` → `Вы заслужили титул Саймона Коварного`.
 
