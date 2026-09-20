@@ -296,25 +296,48 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
     # model's max_output_tokens) instead of len(html).
     budget = max(64000, len(translated_html))
 
-    try:
-        reply = call_model(endpoint, headers, model_id, prompt, budget, timeout)
-    except Exception as exc:
-        return {"chapter": chapter_rel, "ok": False, "status": "api_error",
-                "error": str(exc), "glossary_terms": len(entries)}
+    # A torn input (extra <p> from split tags, `…` fragments) needs the reply to
+    # come back exactly on a permitted count. The model usually lands one merge
+    # short, so a single re-ask carrying the miss is cheaper than a blind rerun:
+    # the chapter is re-sent once, with the count it produced named.
+    paragraph_nudge = ""
+    cleaned, out_paras, merged = "", 0, 0
+    for attempt in range(2):
+        prompt_now = prompt if not paragraph_nudge else prompt + "\n\n" + paragraph_nudge
 
-    cleaned = extract_html(reply)
-    out_paras = count_paragraphs(cleaned)
+        try:
+            reply = call_model(endpoint, headers, model_id, prompt_now, budget, timeout)
+        except Exception as exc:
+            return {"chapter": chapter_rel, "ok": False, "status": "api_error",
+                    "error": str(exc), "glossary_terms": len(entries)}
 
-    if not cleaned or out_paras == 0:
-        return {"chapter": chapter_rel, "ok": False, "status": "empty_reply",
-                "glossary_terms": len(entries), "reply_head": reply[:200]}
+        cleaned = extract_html(reply)
+        out_paras = count_paragraphs(cleaned)
 
-    # Paragraph count is the one invariant EPUB assembly depends on: the count
-    # must be the incoming file's, or — when the input arrived torn (extra <p>
-    # from split tags, `…` fragments) — the source chapter's own count, which is
-    # what assembly splices against. Growing past the input is always rejected.
-    merged = src_paras - out_paras if out_paras < src_paras else 0
-    if out_paras != src_paras and not (merged > 0 and out_paras == en_paras):
+        if not cleaned or out_paras == 0:
+            return {"chapter": chapter_rel, "ok": False, "status": "empty_reply",
+                    "glossary_terms": len(entries), "reply_head": reply[:200]}
+
+        # Paragraph count is the one invariant EPUB assembly depends on: the count
+        # must be the incoming file's, or — when the input arrived torn (extra
+        # <p> from split tags, `…` fragments) — the source chapter's own count,
+        # which is what assembly splices against. Growth past the input is always
+        # rejected.
+        merged = src_paras - out_paras if out_paras < src_paras else 0
+        if out_paras == src_paras or (merged > 0 and out_paras == en_paras):
+            break
+        if attempt == 0:
+            paragraph_nudge = (
+                "# ПОПРАВКА К ПРЕДЫДУЩЕЙ ПОПЫТКЕ\n\n"
+                f"Твой предыдущий ответ дал {out_paras} абзацев. Их должно быть "
+                f"{src_paras}, а если во входе разрезов больше, чем в оригинале, — "
+                f"ровно {en_paras} (по оригиналу). Ты {out_paras - en_paras} "
+                f"абзац(ев) не склеил: пересмотри вход заново — одинокие теги "
+                f"`<p><strong></p>`, `<p>…</strong></p>` и `…`-осколки между ними, — "
+                f"склей все такие пары в один абзац по оригиналу и верни HTML "
+                f"целиком."
+            )
+            continue
         return {"chapter": chapter_rel, "ok": False,
                 "status": "paragraph_mismatch",
                 "source_paragraphs": src_paras, "review_paragraphs": out_paras,
