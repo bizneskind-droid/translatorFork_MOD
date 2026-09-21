@@ -873,7 +873,7 @@
   "agentrouter": {
     "display_name": "AgentRouter (Claude)",
     "handler_class": "AgentRouterApiHandler",
-    "base_url": "http://127.0.0.1:3001/v1/chat/completions",
+    "base_url": "http://127.0.0.1:3000/v1/chat/completions",
     "is_async": true,
     "needs_warmup": false,
     "visible": true,
