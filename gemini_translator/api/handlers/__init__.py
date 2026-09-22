@@ -11,6 +11,7 @@ if __name__ != "__main__":
     from .duo_cli import DuoCliApiHandler
     from .gemini import GeminiApiHandler
     from .gumloop import GumloopApiHandler
+    from .hermes import HermesApiHandler
     from .huggingface import HuggingFaceApiHandler
     from .local import LocalApiHandler
     from .openrouter import OpenRouterApiHandler
@@ -25,6 +26,7 @@ if __name__ != "__main__":
         "DuoCliApiHandler",
         "GeminiApiHandler",
         "GumloopApiHandler",
+        "HermesApiHandler",
         "HuggingFaceApiHandler",
         "LocalApiHandler",
         "OpenRouterApiHandler",

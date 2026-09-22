@@ -146,13 +146,39 @@ def resolve_endpoint(provider_id: str, provider_conf: dict) -> str:
 PLACEHOLDER_KEYS = ("DUMMY", "NONE", "X", "-", "")
 
 
-def build_headers(provider_id: str, api_key: str | None) -> dict[str, str]:
+ANTHROPIC_VERSION = "2023-06-01"
+
+# Providers whose review stage must speak the Anthropic Messages protocol
+# (POST <base_url> /v1/messages, x-api-key header, content[] response) instead
+# of the OpenAI /v1/chat/completions shape. justwoker (provider id "hermes")
+# sits behind Cloudflare and 403s the OpenAI path, so review/polish must go
+# through the same Anthropic endpoint the translate stage uses.
+_ANTHROPIC_HANDLERS = {"HermesApiHandler"}
+
+
+def is_anthropic_provider(provider_id: str, provider_conf: dict | None,
+                          endpoint: str = "") -> bool:
+    conf = provider_conf or {}
+    if str(conf.get("handler_class") or "") in _ANTHROPIC_HANDLERS:
+        return True
+    return endpoint.rstrip("/").endswith("/v1/messages")
+
+
+def build_headers(provider_id: str, api_key: str | None,
+                  *, anthropic: bool = False) -> dict[str, str]:
     headers = {"Content-Type": "application/json"}
     # Placeholder keys are the documented convention for proxy providers
     # (--api-key DUMMY), so they must never win over a real credential.
     real_key = None
     if api_key and api_key.strip().upper() not in PLACEHOLDER_KEYS:
         real_key = api_key.strip()
+
+    if anthropic:
+        # Anthropic Messages transport: x-api-key + anthropic-version. The jw
+        # proxy injects the real key from JW_API_KEY, so a placeholder is fine.
+        headers["x-api-key"] = real_key or "DUMMY"
+        headers["anthropic-version"] = ANTHROPIC_VERSION
+        return headers
 
     if provider_id == "gumloop":
         env = _load_env_pairs("GUMLOOP_")
@@ -173,8 +199,94 @@ class EmptyContentError(RuntimeError):
     """DS4F выжег бюджет на reasoning и вернул пустой content."""
 
 
+def _call_model_anthropic(endpoint: str, headers: dict, model_id: str,
+                          prompt: str, max_tokens: int,
+                          timeout: int = DEFAULT_TIMEOUT) -> str:
+    """Anthropic Messages transport for review/polish on justwoker (jw).
+
+    STREAMING POST to /v1/messages: jw sits behind Cloudflare with an origin
+    timeout ~100s. A non-stream request makes the origin hold the socket until
+    the whole completion (review of a full chapter + thinking) is generated —
+    that routinely runs past 100s and Cloudflare 524s before the first byte.
+    Streaming (like the translate handler) pushes SSE frames immediately, so CF
+    sees bytes early and never cuts. Text is accumulated from
+    content_block_delta/text_delta frames; thinking frames are ignored.
+
+    Thinking is OFF by default (HERMES_THINKING_BUDGET=0): on a full chapter
+    Opus burns minutes of reasoning behind Cloudflare's ~100s origin timeout and
+    524s without improving the review. Set HERMES_THINKING_BUDGET=<tokens> to
+    re-enable.
+    """
+    payload = {
+        "model": model_id,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+    }
+    try:
+        budget = int(os.environ.get("HERMES_THINKING_BUDGET", "0"))
+    except (TypeError, ValueError):
+        budget = 0
+    if budget > 0:
+        payload["thinking"] = {"type": "enabled", "budget_tokens": budget}
+    else:
+        payload["thinking"] = {"type": "disabled"}
+
+    stream_headers = dict(headers)
+    stream_headers["Accept"] = "text/event-stream"
+    req = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"),
+                                 headers=stream_headers)
+    content = ""
+    stop_reason = None
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            for raw in r:
+                line = raw.decode("utf-8", "replace").strip()
+                if not line or not line.startswith("data:"):
+                    continue
+                data_str = line[len("data:"):].strip()
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_str)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(chunk, dict):
+                    continue
+                ev = chunk.get("type")
+                if ev == "content_block_delta":
+                    delta = chunk.get("delta") or {}
+                    if delta.get("type") == "text_delta":
+                        content += delta.get("text") or ""
+                elif ev == "message_delta":
+                    sr = (chunk.get("delta") or {}).get("stop_reason")
+                    if sr:
+                        stop_reason = sr
+                elif ev == "error":
+                    err = chunk.get("error") or {}
+                    raise RuntimeError(
+                        "SSE error: %s" % err.get("message", data_str))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:500]
+        raise RuntimeError(f"HTTP {e.code}: {detail}")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"нет соединения: {e}")
+
+    if not content:
+        raise EmptyContentError(
+            "пустой content (stop_reason=%s, max_tokens=%s)" % (stop_reason, max_tokens))
+    return content
+
+
 def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
-               max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
+               max_tokens: int, timeout: int = DEFAULT_TIMEOUT,
+               anthropic: bool = False) -> str:
+    # justwoker (jw) speaks Anthropic Messages, not OpenAI chat/completions —
+    # route it to the dedicated transport.
+    if anthropic:
+        return _call_model_anthropic(endpoint, headers, model_id, prompt,
+                                     max_tokens, timeout)
+
     # DS4F reasoning drift (2026-09-11): reasoning is now the default upstream
     # and burns the whole max_tokens budget on reasoning_content, leaving an
     # empty content field. Review calls go through this raw path (not the
@@ -268,7 +380,8 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
                    glossary: dict[str, dict], prompt_template: str,
                    endpoint: str, headers: dict, model_id: str,
                    project_rules: str = "",
-                   timeout: int = DEFAULT_TIMEOUT) -> dict:
+                   timeout: int = DEFAULT_TIMEOUT,
+                   anthropic: bool = False) -> dict:
     """Review one chapter. Returns a result dict; never raises on model issues."""
     cn_text = cn_chapter_text(cn_epub, chapter_rel)
     entries = scope_glossary(glossary, cn_text)
@@ -310,7 +423,8 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
     reply = None
     for _attempt in range(3):
         try:
-            reply = call_model(endpoint, headers, model_id, prompt, budget, timeout)
+            reply = call_model(endpoint, headers, model_id, prompt, budget,
+                               timeout, anthropic=anthropic)
             break
         except EmptyContentError as exc:
             last_error = exc

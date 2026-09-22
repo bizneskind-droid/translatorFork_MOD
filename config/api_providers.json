@@ -873,7 +873,7 @@
   "agentrouter": {
     "display_name": "AgentRouter (Claude)",
     "handler_class": "AgentRouterApiHandler",
-    "base_url": "http://127.0.0.1:3000/v1/chat/completions",
+    "base_url": "http://127.0.0.1:3001/v1/chat/completions",
     "is_async": true,
     "needs_warmup": false,
     "visible": true,
@@ -1298,6 +1298,29 @@
         "max_concurrent_requests": 3,
         "max_output_tokens": 16000,
         "context_length": 1048576,
+        "min_thinking_budget": false
+      }
+    }
+  },
+  "hermes": {
+    "display_name": "Hermes Agent",
+    "provider": "hermes",
+    "handler_class": "HermesApiHandler",
+    "base_url": "http://127.0.0.1:8790/v1/messages",
+    "base_timeout": 1200,
+    "is_async": true,
+    "needs_warmup": false,
+    "visible": true,
+    "file_suffix": "_translated_hm.html",
+    "shared_request_counter": false,
+    "models": {
+      "Claude Opus 4.8 (Hermes)": {
+        "id": "claude-opus-4-8",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 32000,
+        "context_length": 1000000,
         "min_thinking_budget": false
       }
     }

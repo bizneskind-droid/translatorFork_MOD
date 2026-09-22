@@ -1249,10 +1249,15 @@ def command_review(args) -> dict:
         )
         provider_conf = api_config.api_providers().get(provider_id) or {}
         endpoint = review_mod.resolve_endpoint(provider_id, provider_conf)
+        anthropic_transport = review_mod.is_anthropic_provider(
+            provider_id, provider_conf, endpoint
+        )
         keys = _resolve_api_keys(
             api_config, app.settings_manager, provider_id, saved_settings, args
         )
-        headers = review_mod.build_headers(provider_id, keys[0] if keys else None)
+        headers = review_mod.build_headers(
+            provider_id, keys[0] if keys else None, anthropic=anthropic_transport
+        )
         model_id = model_config.get("id") or model_name
 
         suffix = _resolve_build_suffix(args) or provider_conf.get("file_suffix")
@@ -1288,6 +1293,7 @@ def command_review(args) -> dict:
                 model_id=model_id,
                 project_rules=project_rules,
                 timeout=args.timeout or review_mod.DEFAULT_TIMEOUT,
+                anthropic=anthropic_transport,
             )
 
             if res.get("ok") and res.get("html"):
