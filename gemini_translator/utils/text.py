@@ -2937,9 +2937,15 @@ def validate_html_structure(original_html, translated_html):
         # (гл.74 «Сто царствований», Sep 2026: EN[14] пропал, RU 116 против EN 117).
         # Проверка односторонняя: меньше — дефект (пропуск/слипание), больше —
         # разрезы системных блоков, они чинятся downstream и ретрай не нужен.
-        if orig_p_open > 0 and trans_p_open < orig_p_open:
+        # Базой служит СЫРОЙ источник (original_html), а не prettified: prettify_html_for_ai
+        # расщепляет блоки с переносами (mitosis) и задирает счёт источника выше того,
+        # что модель получала на вход (гл.111: сырой 102 <p> против prettified 106 —
+        # верный ответ с 102 <p> отбрасывался 6 попыток подряд). Книжный канон совпадает
+        # с сырым счётом, а не с prettified (гл.110: в книгу вошло 98 <p>).
+        orig_p_open_raw = len(re.findall(p_open_pat, original_html.lower().strip()))
+        if orig_p_open_raw > 0 and trans_p_open < orig_p_open_raw:
             return False, (
-                f"Потеряны абзацы: в источнике {orig_p_open} <p>, в переводе {trans_p_open}. "
+                f"Потеряны абзацы: в источнике {orig_p_open_raw} <p>, в переводе {trans_p_open}. "
                 "Перевести ВСЕ абзацы источника по порядку, ничего не пропуская и не сливая."
             ), final_translated_html
 
