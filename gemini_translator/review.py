@@ -292,6 +292,13 @@ def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
     # empty content field. Review calls go through this raw path (not the
     # agentrouter handler), so the effort cap must be set here as well.
     # The budget must also cover both reasoning AND content.
+    #
+    # 2026-09-26: `reasoning_effort: none` alone does NOT stop DS4F reasoning on
+    # this proxy — measured on the ch137 polish prompt it still burned 74k
+    # reasoning chars and returned empty content (finish_reason=max_tokens) in
+    # 91s. Adding `thinking: {"type": "disabled"}` (the same switch the DeepSeek
+    # translate handler uses) truly disables it: the identical call answered in
+    # 22s with reasoning_chars=0 and full content. Both flags are set.
     reasoning_off = "deepseek" in str(model_id).lower()
     payload = {
         "model": model_id,
@@ -300,6 +307,7 @@ def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
     }
     if reasoning_off:
         payload["reasoning_effort"] = "none"
+        payload["thinking"] = {"type": "disabled"}
 
     req = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"),
                                  headers=headers)
