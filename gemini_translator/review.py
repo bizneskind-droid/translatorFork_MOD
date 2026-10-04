@@ -30,6 +30,9 @@ import html
 import json
 import os
 import re
+import shutil
+import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 import zipfile
@@ -134,6 +137,8 @@ def _load_env_pairs(prefix: str) -> dict[str, str]:
 
 
 def resolve_endpoint(provider_id: str, provider_conf: dict) -> str:
+    if provider_id == "agy" or str((provider_conf or {}).get("handler_class") or "") == "AgyApiHandler":
+        return "agy"
     base = (provider_conf or {}).get("base_url") or ""
     if not base:
         raise ValueError(
@@ -166,6 +171,8 @@ def is_anthropic_provider(provider_id: str, provider_conf: dict | None,
 
 def build_headers(provider_id: str, api_key: str | None,
                   *, anthropic: bool = False) -> dict[str, str]:
+    if provider_id == "agy":
+        return {}
     headers = {"Content-Type": "application/json"}
     # Placeholder keys are the documented convention for proxy providers
     # (--api-key DUMMY), so they must never win over a real credential.
@@ -278,9 +285,78 @@ def _call_model_anthropic(endpoint: str, headers: dict, model_id: str,
     return content
 
 
+# Жёсткий запрет инструментов на уровне промпта для agy в review/polish
+_NO_TOOLS_DIRECTIVE = (
+    "\n\n## TOOL POLICY (STRICT)\n"
+    "You have NO tools available. Do NOT call any tool "
+    "(no run_command, view_file, write_to_file, grep_search, or any function call).\n"
+    "Return the full edited HTML chapter DIRECTLY as your text answer only. "
+    "Do not attempt to save, write, or store the result anywhere — "
+    "output it inline as plain text/HTML as instructed above.\n"
+)
+
+
+def _call_model_agy(model_id: str, prompt: str, timeout: int = DEFAULT_TIMEOUT) -> str:
+    bin_path = shutil.which("agy") or os.path.expanduser("~/.local/bin/agy")
+    if not os.path.isfile(bin_path) or not os.access(bin_path, os.X_OK):
+        raise RuntimeError(f"agy CLI binary not found at {bin_path}")
+
+    full_prompt = prompt + _NO_TOOLS_DIRECTIVE
+    cmd = [bin_path, "--output-format", "stream-json", "--disable-slash-commands"]
+    if model_id and model_id != "default":
+        cmd.extend(["--model", str(model_id)])
+
+    workdir = tempfile.mkdtemp(prefix="agy_review_work_")
+    try:
+        proc = subprocess.run(
+            cmd,
+            input=full_prompt.encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=workdir,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"agy timeout after {timeout}s")
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+    if proc.returncode != 0:
+        err = proc.stderr.decode("utf-8", "replace")[:500]
+        raise RuntimeError(f"agy failed with code {proc.returncode}: {err}")
+
+    out_lines = proc.stdout.decode("utf-8", "replace").splitlines()
+    content = ""
+    for line in out_lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        if event.get("event") == "result":
+            res = event.get("result") or {}
+            content = res.get("response") or ""
+            break
+        elif event.get("event") == "step_update":
+            step = event.get("step_update") or {}
+            delta = step.get("text_delta") or ""
+            if delta:
+                content += delta
+
+    if not content:
+        raise EmptyContentError(f"пустой ответ agy (code={proc.returncode})")
+    return content
+
+
 def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
                max_tokens: int, timeout: int = DEFAULT_TIMEOUT,
                anthropic: bool = False) -> str:
+    if endpoint == "agy":
+        return _call_model_agy(model_id, prompt, timeout)
     # justwoker (jw) speaks Anthropic Messages, not OpenAI chat/completions —
     # route it to the dedicated transport.
     if anthropic:
