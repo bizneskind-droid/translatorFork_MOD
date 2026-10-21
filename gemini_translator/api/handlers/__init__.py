@@ -5,6 +5,7 @@
 
 if __name__ != "__main__":
     from .agentrouter import AgentRouterApiHandler
+    from .agy import AgyApiHandler
     from .browser import BrowserApiHandler
     from .deepseek import DeepseekApiHandler
     from .dry_run import DryRunApiHandler
@@ -20,6 +21,7 @@ if __name__ != "__main__":
 
     __all__ = [
         "AgentRouterApiHandler",
+        "AgyApiHandler",
         "BrowserApiHandler",
         "DeepseekApiHandler",
         "DryRunApiHandler",

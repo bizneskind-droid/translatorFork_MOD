@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .base_processor import BaseTaskProcessor
 from gemini_translator.api.errors import ValidationFailedError, PartialGenerationError
@@ -116,11 +119,19 @@ class EpubChunkProcessor(BaseTaskProcessor):
                     original_chunk_with_placeholders = self.worker.prompt_builder._replace_media_with_placeholders(content_to_translate_for_api)
                     is_valid, reason, validated_chunk = validate_html_structure(original_chunk_with_placeholders, final_restored_html)
                     if not is_valid:
-                        self._raise_validation_error(
-                            f"JSON chunk не прошел финальную HTML-валидацию: {reason}",
-                            raw_response
-                        )
-                    final_restored_html = validated_chunk
+                        orig_len = len(original_chunk_with_placeholders)
+                        trans_len = len(validated_chunk or final_restored_html)
+                        if trans_len > 100 and (orig_len == 0 or trans_len >= orig_len * 0.35):
+                            logger.warning(
+                                f"⚠️ [WORKER] Несоответствие структуры чанка ({reason}), но перевод сохранён ({trans_len} симв.) для последующего Re-align."
+                            )
+                            is_valid = True
+                        else:
+                            self._raise_validation_error(
+                                f"JSON chunk не прошел финальную HTML-валидацию: {reason}",
+                                raw_response
+                            )
+                    final_restored_html = validated_chunk or final_restored_html
 
                 noise_report = estimate_translation_noise(content_to_translate_for_api, source_payload)
                 self.worker._post_event('log_message', {
@@ -203,11 +214,19 @@ class EpubChunkProcessor(BaseTaskProcessor):
         if not getattr(self.worker, "force_accept", False):
             is_valid, reason, validated_chunk = validate_html_structure(original_chunk_with_placeholders, accumulated_text)
             if not is_valid:
-                self._raise_validation_error(
-                    f"Финальный текст не прошел валидацию: {reason}",
-                    accumulated_raw_html or newly_generated_part_raw
-                )
-            accumulated_text = validated_chunk
+                orig_len = len(original_chunk_with_placeholders)
+                trans_len = len(validated_chunk or accumulated_text)
+                if trans_len > 100 and (orig_len == 0 or trans_len >= orig_len * 0.35):
+                    logger.warning(
+                        f"⚠️ [WORKER] Несоответствие структуры финального текста ({reason}), но перевод сохранён ({trans_len} симв.) для последующего Re-align."
+                    )
+                    is_valid = True
+                else:
+                    self._raise_validation_error(
+                        f"Финальный текст не прошел валидацию: {reason}",
+                        accumulated_raw_html or newly_generated_part_raw
+                    )
+            accumulated_text = validated_chunk or accumulated_text
 
         final_restored_html = self.worker.response_parser._restore_media_from_placeholders(
             translated_content=accumulated_text,

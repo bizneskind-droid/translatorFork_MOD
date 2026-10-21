@@ -34,6 +34,7 @@ Consult this data for vocabulary consistency.
 *   **Ban on Domestic Russification:** Currency, geography, titles, and food must strictly correspond to the original setting (Yuan ≠ Rubles, Sirs ≠ Boyars).
 *   **Linguistic Logic:** Avoid language-bound meta-expressions if they contradict the plot. (For example, in a dialogue between foreigners, translate "I told you in plain English" as **"Я тебе ясно сказал"**, not **"Я тебе русским языком сказал"**). The text should feel as if a Russian author with deep knowledge of the culture is clearly describing a *foreign* world, not turning it into Russia.
 *   **Foreign Inclusions:** Retain the original script **only for visual artifacts** (logos, image-symbols). Reveal their meaning **strictly through context**—via the character's reaction or a description of events, narrated by the author. Technical crutches are forbidden: no footnotes, no brackets with translations, no breaks in the narrative.
+*   **Avoid Overused Bookish Epithets:** Do not overuse rare/pretentious words like «циклопический» for ordinary descriptions of scale (`immense`, `huge`, `massive`, `colossal`, `giant`). Use natural literary Russian synonyms: «исполинский», «колоссальный», «гигантский», «огромный», «громадный». Keep «циклопический» / «циклопий» strictly for actual cyclopes or their mythic anatomy (e.g. `single cyclopean eye` → «циклопий глаз», «единственный глаз циклопа»).
 
 ### [ANCHOR C: HTML ARCHITECTURE — SOURCE-DRIVEN PARAGRAPH AND SPEECH FORMAT]
 
@@ -49,6 +50,14 @@ Consult this data for vocabulary consistency.
 *   If the source marks direct speech with a dash (`— Нет.`, `— сказал он`), use the same classical Russian dash punctuation in the same positions: speech opens with `—`, attribution joins with `, —`.
 *   If the source marks speech with a special operator (`─` U+2500), use `—` (em dash, U+2014). NEVER emit `─` (U+2500) in the output — it is a box-drawing character, not a Russian dash.
 *   If the source wraps thoughts/quotes/inscriptions in guillemets («...»), keep guillemets. If the source uses italics for thoughts, keep the italics (translate the visible text inside).
+*   **Speech interrupted by thoughts/narration within a single `<p>`:**
+    If direct speech in the source is interrupted by the character's unvoiced thoughts / internal monologue and then resumes within the same `<p>` (e.g. `“Speech 1.” Unspoken thoughts / reflections. “Speech 2.”`):
+    Wrap the inner thoughts in italics (`<em>...</em>`) and separate with dashes:
+    `— Реплика. — <em>Внутренние мысли персонажа.</em> — Реплика.`
+    **CRITICAL:** In English web serials, author often writes unvoiced thoughts without italics between quotes. You MUST wrap them in `<em>...</em>` and dashes EVEN IF the English source has no `<em>` tag! Never leave thoughts un-italicized or glued to spoken dialogue (e.g. `— Реплика. Мысли...` or `— Реплика. — Мысли без курсива. — Реплика`).
+    This clearly distinguishes unvoiced internal reflections from spoken dialogue while preserving the 1:1 `<p>` paragraph count.
+*   **Unvoiced thoughts / internal monologue (`thought Simon` / `he realized`):**
+    When a character is thinking to themselves rather than speaking out loud, render the thought in italics or guillemets (e.g. `<em>Труп</em>, — подумал Саймон` or `«Труп», — подумал Саймон`) rather than an open dialogue dash (`— Труп`), so thoughts are never confused with spoken dialogue.
 *   Do not invent a new punctuation scheme, do not convert one scheme into another, do not add or remove quotation marks.
 *   **Ellipsis, dashes, capitalization of the first speech word:** copy the source's behavior.
 

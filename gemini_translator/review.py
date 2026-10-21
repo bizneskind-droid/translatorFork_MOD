@@ -326,7 +326,8 @@ def _call_model_agy(model_id: str, prompt: str, timeout: int = DEFAULT_TIMEOUT) 
         raise RuntimeError(f"agy failed with code {proc.returncode}: {err}")
 
     out_lines = proc.stdout.decode("utf-8", "replace").splitlines()
-    content = ""
+    collected_text = ""
+    final_result = ""
     for line in out_lines:
         line = line.strip()
         if not line:
@@ -339,13 +340,14 @@ def _call_model_agy(model_id: str, prompt: str, timeout: int = DEFAULT_TIMEOUT) 
             continue
         if event.get("event") == "result":
             res = event.get("result") or {}
-            content = res.get("response") or ""
-            break
+            final_result = res.get("response") or ""
         elif event.get("event") == "step_update":
             step = event.get("step_update") or {}
             delta = step.get("text_delta") or ""
             if delta:
-                content += delta
+                collected_text += delta
+
+    content = collected_text if len(collected_text.strip()) >= len(final_result.strip()) else final_result
 
     if not content:
         raise EmptyContentError(f"пустой ответ agy (code={proc.returncode})")
@@ -532,7 +534,7 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
     # from split tags, `…` fragments) — the source chapter's own count, which is
     # what assembly splices against. Growth past the input is always rejected.
     merged = src_paras - out_paras if out_paras < src_paras else 0
-    if out_paras != src_paras and not (merged > 0 and out_paras == en_paras):
+    if out_paras != src_paras and out_paras != en_paras:
         return {"chapter": chapter_rel, "ok": False,
                 "status": "paragraph_mismatch",
                 "source_paragraphs": src_paras, "review_paragraphs": out_paras,

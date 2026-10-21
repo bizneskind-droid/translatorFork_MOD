@@ -265,8 +265,28 @@ class ResponseParser:
                         is_valid, reason, validated_html = self.validator_func(original_with_placeholders, raw_body_from_ai)
                         
                         if not is_valid:
-                            report['failed'].append((chapter_path, f"Валидация: {reason}"))
-                            continue
+                            from gemini_translator.utils.realign import try_realign_translated_html
+                            realigned = try_realign_translated_html(
+                                original_with_placeholders, raw_body_from_ai, worker=self.worker
+                            )
+                            if realigned:
+                                is_valid_re, reason_re, val_re = self.validator_func(
+                                    original_with_placeholders, realigned
+                                )
+                                if is_valid_re:
+                                    is_valid = True
+                                    validated_html = val_re
+                        
+                        if not is_valid:
+                            orig_l = len(original_with_placeholders)
+                            trans_l = len(validated_html or raw_body_from_ai)
+                            if trans_l > 200 and (orig_l == 0 or trans_l >= orig_l * 0.35):
+                                self.log(f"⚠️ [WORKER] Несоответствие структуры ({reason}), но перевод главы '{chapter_path}' сохранён ({trans_l} символов) для последующего Re-align в конвейере.")
+                                is_valid = True
+                                validated_html = validated_html or raw_body_from_ai
+                            else:
+                                report['failed'].append((chapter_path, f"Валидация: {reason}"))
+                                continue
                         
                         # Если валидация прошла (возможно, после авто-лечения),
                         # обновляем контент на исправленную версию перед восстановлением медиа

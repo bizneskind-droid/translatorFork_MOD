@@ -1,0 +1,1190 @@
+diff --git a/config/api_providers.json b/config/api_providers.json
+index fa49079..eb165cd 100644
+--- a/config/api_providers.json
++++ b/config/api_providers.json
+@@ -873,7 +873,7 @@
+   "agentrouter": {
+     "display_name": "AgentRouter (Claude)",
+     "handler_class": "AgentRouterApiHandler",
+-    "base_url": "http://127.0.0.1:3001/v1/chat/completions",
++    "base_url": "http://127.0.0.1:3000/v1/chat/completions",
+     "is_async": true,
+     "needs_warmup": false,
+     "visible": true,
+@@ -1324,5 +1324,151 @@
+         "min_thinking_budget": false
+       }
+     }
++  },
++  "agy": {
++    "display_name": "Antigravity (agy CLI)",
++    "handler_class": "AgyApiHandler",
++    "binary": "",
++    "timeout_seconds": 600,
++    "base_timeout": 600,
++    "is_async": true,
++    "needs_warmup": false,
++    "visible": true,
++    "requires_api_key": false,
++    "placeholder_api_key": "__antigravity_agy_session__",
++    "file_suffix": "_translated_agy.html",
++    "shared_request_counter": false,
++    "reset_policy": {
++      "type": "rolling",
++      "duration_hours": 24
++    },
++    "models": {
++      "Gemini 3.8 Flash (High)": {
++        "id": "gemini-3.8-flash-high",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.8 Flash (Medium)": {
++        "id": "gemini-3.8-flash-medium",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.8 Flash (Low)": {
++        "id": "gemini-3.8-flash-low",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.7 Flash (High)": {
++        "id": "gemini-3.7-flash-high",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.7 Flash (Medium)": {
++        "id": "gemini-3.7-flash-medium",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.7 Flash (Low)": {
++        "id": "gemini-3.7-flash-low",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.6 Flash (High)": {
++        "id": "gemini-3.6-flash-high",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.6 Flash (Medium)": {
++        "id": "gemini-3.6-flash-medium",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.6 Flash (Low)": {
++        "id": "gemini-3.6-flash-low",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.1 Pro (High)": {
++        "id": "gemini-3.1-pro-high",
++        "rpm": 5,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Gemini 3.1 Pro (Low)": {
++        "id": "gemini-3.1-pro-low",
++        "rpm": 5,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Claude Opus 4.6 (Thinking)": {
++        "id": "claude-opus-4-6-thinking",
++        "rpm": 3,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "Claude Sonnet 4.6": {
++        "id": "claude-sonnet-4-6",
++        "rpm": 5,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 200000,
++        "min_thinking_budget": false
++      },
++      "GPT-OSS 120B (Medium)": {
++        "id": "gpt-oss-120b-medium",
++        "rpm": 8,
++        "needs_chunking": true,
++        "max_concurrent_requests": 1,
++        "max_output_tokens": 32000,
++        "context_length": 128000,
++        "min_thinking_budget": false
++      }
++    }
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/config/hundred_reigns_polish_prompt.txt b/config/hundred_reigns_polish_prompt.txt
+index 53a55ff..bd26683 100644
+--- a/config/hundred_reigns_polish_prompt.txt
++++ b/config/hundred_reigns_polish_prompt.txt
+@@ -67,6 +67,12 @@
+    на «двойник», «подменыш», «копия», не считать выдуманным словом. Падежные формы
+    (`фетчей`, `фетчам`, `фетча`) нормальны. Глагол `to fetch` («принести») — обычный
+    глагол, к правилу не относится.
++13. **Не злоупотреблять редкими книжными эпитетами масштаба («циклопический» и др.).**
++   Не переводить стандартные слова размера (`immense`, `huge`, `massive`, `colossal`, `giant`)
++   вычурным словом «циклопический». Использовать естественные литературные синонимы:
++   «исполинский», «колоссальный», «гигантский», «огромный», «громадный». Слово «циклопический» /
++   «циклопий» уместно ТОЛЬКО там, где речь буквально идёт о циклопах или о мифологической
++   анатомии циклопа (`single cyclopean eye` → «циклопий глаз», «единственный глаз циклопа»).
+ 
+ # ЧТО ДЕЛАТЬ (арсенал)
+ 
+@@ -103,6 +109,11 @@ LitRPG-блоки («Вы открыли Класс...», `Сила B, Живу
+   НЕ получает (`«…магию на ваших вещах.» In truth, Simon had…` → «…вещах». На
+   самом деле Саймон…», НЕ «— На самом деле Саймон…»);
+ - мысли и цитаты — в «ёлочках», курсив — как в источнике;
++- разрыв прямой речи мыслями или невысказанным монологом внутри одного <p>:
++  если прямая речь в оригинале прерывается мыслями героя, а затем продолжается
++  («“Speech 1.” Thoughts. “Speech 2.”»), обособлять внутренние мысли курсивом и тире:
++  «— Реплика. — <em>Мысли героя.</em> — Реплика.».
++  **СТРОГО:** В веб-новелле автор часто пишет невысказанные мысли между репликами простым текстом без курсива («“Yes, I see that now.” Although consuming the Crafter... “I hoped...”»). В русском переводе их ОБЯЗАТЕЛЬНО обособлять курсивом `<em>...</em>` и тире с обеих сторон, ДАЖЕ ЕСЛИ в EN-оригинале не было тега `<em>`. Не отменять курсив из-за правила «курсив как в источнике» и не оставлять мысли слитными со звучащей речью;
+ - телепатия — это «ёлочки», а НЕ тире: в источнике телепатическая речь
+   выделена курсивом (`<em>“Can you at least tell me who’ll be involved in the
+   operation?”</em>`), в книге она идёт как `«Можешь хотя бы сказать мне, кто
+diff --git a/config/hundred_reigns_prompt.txt b/config/hundred_reigns_prompt.txt
+index 36fa664..b9ad92c 100644
+--- a/config/hundred_reigns_prompt.txt
++++ b/config/hundred_reigns_prompt.txt
+@@ -34,6 +34,7 @@ Consult this data for vocabulary consistency.
+ *   **Ban on Domestic Russification:** Currency, geography, titles, and food must strictly correspond to the original setting (Yuan ≠ Rubles, Sirs ≠ Boyars).
+ *   **Linguistic Logic:** Avoid language-bound meta-expressions if they contradict the plot. (For example, in a dialogue between foreigners, translate "I told you in plain English" as **"Я тебе ясно сказал"**, not **"Я тебе русским языком сказал"**). The text should feel as if a Russian author with deep knowledge of the culture is clearly describing a *foreign* world, not turning it into Russia.
+ *   **Foreign Inclusions:** Retain the original script **only for visual artifacts** (logos, image-symbols). Reveal their meaning **strictly through context**—via the character's reaction or a description of events, narrated by the author. Technical crutches are forbidden: no footnotes, no brackets with translations, no breaks in the narrative.
++*   **Avoid Overused Bookish Epithets:** Do not overuse rare/pretentious words like «циклопический» for ordinary descriptions of scale (`immense`, `huge`, `massive`, `colossal`, `giant`). Use natural literary Russian synonyms: «исполинский», «колоссальный», «гигантский», «огромный», «громадный». Keep «циклопический» / «циклопий» strictly for actual cyclopes or their mythic anatomy (e.g. `single cyclopean eye` → «циклопий глаз», «единственный глаз циклопа»).
+ 
+ ### [ANCHOR C: HTML ARCHITECTURE — SOURCE-DRIVEN PARAGRAPH AND SPEECH FORMAT]
+ 
+@@ -49,6 +50,14 @@ Consult this data for vocabulary consistency.
+ *   If the source marks direct speech with a dash (`— Нет.`, `— сказал он`), use the same classical Russian dash punctuation in the same positions: speech opens with `—`, attribution joins with `, —`.
+ *   If the source marks speech with a special operator (`─` U+2500), use `—` (em dash, U+2014). NEVER emit `─` (U+2500) in the output — it is a box-drawing character, not a Russian dash.
+ *   If the source wraps thoughts/quotes/inscriptions in guillemets («...»), keep guillemets. If the source uses italics for thoughts, keep the italics (translate the visible text inside).
++*   **Speech interrupted by thoughts/narration within a single `<p>`:**
++    If direct speech in the source is interrupted by the character's unvoiced thoughts / internal monologue and then resumes within the same `<p>` (e.g. `“Speech 1.” Unspoken thoughts / reflections. “Speech 2.”`):
++    Wrap the inner thoughts in italics (`<em>...</em>`) and separate with dashes:
++    `— Реплика. — <em>Внутренние мысли персонажа.</em> — Реплика.`
++    **CRITICAL:** In English web serials, author often writes unvoiced thoughts without italics between quotes. You MUST wrap them in `<em>...</em>` and dashes EVEN IF the English source has no `<em>` tag! Never leave thoughts un-italicized or glued to spoken dialogue (e.g. `— Реплика. Мысли...` or `— Реплика. — Мысли без курсива. — Реплика`).
++    This clearly distinguishes unvoiced internal reflections from spoken dialogue while preserving the 1:1 `<p>` paragraph count.
++*   **Unvoiced thoughts / internal monologue (`thought Simon` / `he realized`):**
++    When a character is thinking to themselves rather than speaking out loud, render the thought in italics or guillemets (e.g. `<em>Труп</em>, — подумал Саймон` or `«Труп», — подумал Саймон`) rather than an open dialogue dash (`— Труп`), so thoughts are never confused with spoken dialogue.
+ *   Do not invent a new punctuation scheme, do not convert one scheme into another, do not add or remove quotation marks.
+ *   **Ellipsis, dashes, capitalization of the first speech word:** copy the source's behavior.
+ 
+diff --git a/config/hundred_reigns_review_prompt.txt b/config/hundred_reigns_review_prompt.txt
+index 95d5812..12cd401 100644
+--- a/config/hundred_reigns_review_prompt.txt
++++ b/config/hundred_reigns_review_prompt.txt
+@@ -160,6 +160,11 @@ A, ...`), перки, титулы, уведомления — держи в н
+   «…магию на ваших вещах». На самом деле Саймон поручил Душару… (НЕ
+   «— На самом деле Саймон поручил…»: это рассказчик, а не реплика);
+ - мысли и цитаты — в «ёлочках», если так в источнике; курсив — как в источнике;
++- разрыв прямой речи мыслями или невысказанным монологом внутри одного <p>:
++  если прямая речь в оригинале прерывается мыслями героя, а затем продолжается
++  («“Speech 1.” Thoughts. “Speech 2.”»), обособлять внутренние мысли курсивом и тире:
++  «— Реплика. — <em>Мысли героя.</em> — Реплика.».
++  **СТРОГО:** В веб-новелле автор часто пишет невысказанные мысли между репликами простым текстом без курсива («“Yes, I see that now.” Although consuming the Crafter... “I hoped...”»). В русском переводе их ОБЯЗАТЕЛЬНО обособлять курсивом `<em>...</em>` и тире с обеих сторон, ДАЖЕ ЕСЛИ в EN-оригинале не было тега `<em>`. Не отменять курсив из-за правила «курсив как в источнике» и не оставлять мысли слитными со звучащей речью;
+ - телепатия — это «ёлочки», а НЕ тире: в источнике телепатическая речь
+   выделена курсивом (`<em>“Can you at least tell me who’ll be involved in the
+   operation?”</em>`), в книге она идёт как `«Можешь хотя бы сказать мне, кто
+diff --git a/gemini_translator/api/handlers/__init__.py b/gemini_translator/api/handlers/__init__.py
+index a27b46e..da1af79 100644
+--- a/gemini_translator/api/handlers/__init__.py
++++ b/gemini_translator/api/handlers/__init__.py
+@@ -5,6 +5,7 @@
+ 
+ if __name__ != "__main__":
+     from .agentrouter import AgentRouterApiHandler
++    from .agy import AgyApiHandler
+     from .browser import BrowserApiHandler
+     from .deepseek import DeepseekApiHandler
+     from .dry_run import DryRunApiHandler
+@@ -20,6 +21,7 @@ if __name__ != "__main__":
+ 
+     __all__ = [
+         "AgentRouterApiHandler",
++        "AgyApiHandler",
+         "BrowserApiHandler",
+         "DeepseekApiHandler",
+         "DryRunApiHandler",
+diff --git a/gemini_translator/cli.py b/gemini_translator/cli.py
+index 90d281c..19390ae 100644
+--- a/gemini_translator/cli.py
++++ b/gemini_translator/cli.py
+@@ -1377,6 +1377,370 @@ def _add_common_run_args(parser: argparse.ArgumentParser) -> None:
+     parser.add_argument("--settings-json", help="JSON file with final settings overrides.")
+ 
+ 
++def command_pipeline(args) -> dict:
++    """Run automated end-to-end chapter pipeline (translate -> review -> polish -> verify -> insert/publish)."""
++    import glob
++    import subprocess
++
++    epub_path = _abs_path(args.epub)
++    project_folder = _abs_path(args.project)
++
++    raw_chapter = None
++    if getattr(args, "chapter", None):
++        raw_chapter = args.chapter[0] if isinstance(args.chapter, list) else str(args.chapter)
++    if not raw_chapter:
++        raise CliError("Chapter must be specified via --chapter (e.g. 196 or chapter_00196.xhtml).")
++
++    m = re.search(r"(\d+)", os.path.basename(raw_chapter))
++    if not m:
++        raise CliError(f"Cannot extract chapter number from '{raw_chapter}'.")
++    ch_num = int(m.group(1))
++    ch_file = f"chapter_{ch_num:05d}.xhtml"
++    ch_stem = f"chapter_{ch_num:05d}"
++
++    stages_dir = f"/tmp/hr{ch_num}-stages"
++    os.makedirs(stages_dir, exist_ok=True)
++
++    cli_script = os.path.abspath(sys.argv[0])
++
++    provider = getattr(args, "provider", None) or "agy"
++    model = getattr(args, "model", None) or ("Gemini 3.8 Flash (Medium)" if provider == "agy" else "DeepSeek V4 Flash (AR)")
++    fallback_p = getattr(args, "fallback_provider", None) or "agentrouter"
++    fallback_m = getattr(args, "fallback_model", None) or "DeepSeek V4 Flash (AR)"
++    rev_provider = getattr(args, "review_provider", None) or provider
++    rev_model = getattr(args, "review_model", None) or (model if rev_provider == provider else ("Gemini 3.8 Flash (Medium)" if rev_provider == "agy" else "DeepSeek V4 Flash (AR)"))
++    glossary = getattr(args, "glossary", None) or "/home/almaz/projects/hundred-reigns/glossary/glossary.json"
++    prompt_file = getattr(args, "prompt_file", None) or "config/hundred_reigns_prompt.txt"
++    rev_prompt_file = getattr(args, "review_prompt_file", None) or "config/hundred_reigns_review_prompt.txt"
++    pol_prompt_file = getattr(args, "polish_prompt_file", None) or "config/hundred_reigns_polish_prompt.txt"
++    realign_prompt_file = getattr(args, "realign_prompt_file", None) or "config/hundred_reigns_realign_prompt.txt"
++    timeout_sec = getattr(args, "timeout", None) or 600
++    retries = getattr(args, "retries", None) or 2
++
++    print("=" * 50)
++    print(f"СТАРТ КОНВЕЙЕРА: Глава {ch_num} ({provider} / {model})")
++    print(f"Время: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
++    print("=" * 50)
++
++    # 1. TRANSLATE
++    print(f"=== [1/3] TRANSLATE ({datetime.datetime.now().strftime('%H:%M:%S')}) ===")
++    src_html = None
++    candidate_patterns = [
++        os.path.join(project_folder, "EPUB", f"{ch_stem}_translated_*.html"),
++        os.path.join(f"/tmp/hr{ch_num}", "EPUB", f"{ch_stem}_translated_*.html"),
++        os.path.join(f"/tmp/hr{ch_num}_agy", "EPUB", f"{ch_stem}_translated_*.html"),
++        os.path.join(f"/tmp/hr{ch_num}_ar", "EPUB", f"{ch_stem}_translated_*.html"),
++    ]
++    for pat in candidate_patterns:
++        for f in glob.glob(pat):
++            if os.path.isfile(f) and os.path.getsize(f) > 0:
++                src_html = f
++                print(f"  Найден существующий перевод: {src_html}")
++                break
++        if src_html:
++            break
++
++    def run_sub_cmd(cmd_list, log_path=None):
++        print(f"  [RUN] {' '.join(cmd_list[:6])}...")
++        log_fh = open(log_path, "w", encoding="utf-8") if log_path else None
++        try:
++            proc = subprocess.Popen(
++                cmd_list,
++                stdout=subprocess.PIPE,
++                stderr=subprocess.STDOUT,
++                text=True,
++                encoding="utf-8",
++                errors="replace",
++            )
++            out_lines = []
++            for line in proc.stdout:
++                if log_fh:
++                    log_fh.write(line)
++                    log_fh.flush()
++                out_lines.append(line)
++                if any(k in line for k in ("TASK", "STRATEGY", "AGY", "ERROR", "ОШИБКА", "FAIL", "completed", "Карточка", "Зарегистрирована")):
++                    print(f"  {line.strip()}")
++            proc.wait()
++            return proc.returncode, "".join(out_lines)
++        finally:
++            if log_fh:
++                log_fh.close()
++
++    if not src_html:
++        os.makedirs(project_folder, exist_ok=True)
++        print("  Планирование (plan)...")
++        plan_cmd = [
++            sys.executable, cli_script, "--compact", "plan",
++            "--epub", epub_path, "--project", project_folder,
++            "--chapter", ch_file, "--provider", provider,
++            "--model", model, "--api-key", "DUMMY",
++            "--glossary", glossary, "--prompt-file", prompt_file,
++            "--mode", "batch", "--task-size", "13000"
++        ]
++        rc, out = run_sub_cmd(plan_cmd, f"/tmp/hr{ch_num}-plan.log")
++        if rc != 0:
++            print(f"  [ОШИБКА] Этап PLAN упал: {out[-300:]}")
++            raise CliError(f"PLAN failed: {out[-300:]}")
++
++        print("  Перевод (translate)...")
++        trans_cmd = [
++            sys.executable, cli_script, "--compact", "translate",
++            "--epub", epub_path, "--project", project_folder,
++            "--chapter", ch_file, "--provider", provider,
++            "--model", model, "--api-key", "DUMMY",
++            "--glossary", glossary, "--prompt-file", prompt_file,
++            "--mode", "batch", "--task-size", "13000",
++            "--timeout", str(timeout_sec), "--verbose"
++        ]
++        trans_log = f"/tmp/hr{ch_num}-translate.log"
++
++        primary_ok = False
++        for attempt in range(1, retries + 1):
++            if attempt > 1:
++                print(f"  [translate] Повторная попытка {attempt}/{retries} ({provider} / {model})...")
++                shutil.rmtree(project_folder, ignore_errors=True)
++                os.makedirs(project_folder, exist_ok=True)
++                run_sub_cmd(plan_cmd, f"/tmp/hr{ch_num}-plan.log")
++            else:
++                print(f"  [translate] Попытка 1/{retries} ({provider} / {model})...")
++
++            rc, out = run_sub_cmd(trans_cmd, trans_log)
++            has_primary_output = any(
++                os.path.isfile(f) and os.path.getsize(f) > 0
++                for f in glob.glob(os.path.join(project_folder, "EPUB", f"{ch_stem}_translated_*.html"))
++            )
++            is_safety = any(k in out.lower() for k in (
++                "contentfiltererror", "safety", "content policy", "filter", "blocked", "0 tokens", "пустой ответ",
++                "фильтр", "блокировк", "политик", "безопасност", "заблокирован"
++            ))
++            if rc == 0 and not is_safety and has_primary_output:
++                primary_ok = True
++                break
++            print(f"  [translate] Сбой попытки {attempt} (safety={is_safety}, rc={rc}, output={has_primary_output})")
++            if is_safety:
++                print(f"  [translate] Обнаружена блокировка safety policy, повтор {provider} пропущен.")
++                break
++            time.sleep(3)
++
++        if not primary_ok:
++            print(f"  [FALLBACK] Сбой всех попыток {provider}. Переключаемся на {fallback_p} ({fallback_m})...")
++            shutil.rmtree(project_folder, ignore_errors=True)
++            os.makedirs(project_folder, exist_ok=True)
++
++            fb_plan_cmd = [
++                sys.executable, cli_script, "--compact", "plan",
++                "--epub", epub_path, "--project", project_folder,
++                "--chapter", ch_file, "--provider", fallback_p,
++                "--model", fallback_m, "--api-key", "DUMMY",
++                "--glossary", glossary, "--prompt-file", prompt_file,
++                "--mode", "batch", "--task-size", "13000"
++            ]
++            run_sub_cmd(fb_plan_cmd, f"/tmp/hr{ch_num}-plan-fb.log")
++
++            fb_trans_cmd = [
++                sys.executable, cli_script, "--compact", "translate",
++                "--epub", epub_path, "--project", project_folder,
++                "--chapter", ch_file, "--provider", fallback_p,
++                "--model", fallback_m, "--api-key", "DUMMY",
++                "--glossary", glossary, "--prompt-file", prompt_file,
++                "--mode", "batch", "--task-size", "13000",
++                "--timeout", str(timeout_sec), "--verbose"
++            ]
++            rc, out = run_sub_cmd(fb_trans_cmd, trans_log)
++            if rc != 0:
++                raise CliError(f"Fallback translation via {fallback_p} failed: {out[-300:]}")
++
++        for f in glob.glob(os.path.join(project_folder, "EPUB", f"{ch_stem}_translated_*.html")):
++            if os.path.isfile(f) and os.path.getsize(f) > 0:
++                src_html = f
++                break
++        if not src_html:
++            raise CliError(f"Translation completed but output file not found in {project_folder}/EPUB/.")
++        print(f"  OK: Перевод завершён -> {src_html}")
++
++    # Сбор и добавление новых терминов (harvest-terms)
++    if glossary and os.path.isfile(glossary):
++        print(f"\n=== СБОР НОВЫХ ТЕРМИНОВ ({datetime.datetime.now().strftime('%H:%M:%S')}) ===")
++        harvest_cmd = [
++            sys.executable, cli_script, "--compact", "harvest-terms",
++            "--project", project_folder,
++            "--epub", epub_path,
++            "--export-to", glossary,
++            "--min-ahead", "0",
++        ]
++        rc, h_out = run_sub_cmd(harvest_cmd, f"/tmp/hr{ch_num}-harvest.log")
++        if rc == 0:
++            try:
++                m_json = re.search(r'(\{[\s\S]*"ok":\s*true[\s\S]*\})', h_out)
++                if m_json:
++                    h_data = json.loads(m_json.group(1))
++                    terms = h_data.get("terms", [])
++                    export = h_data.get("export") or {}
++                    added_count = export.get("added_count", 0)
++                    print(f"  [HARVEST] Предложено терминов: {len(terms)}, добавлено в глоссарий: {added_count}")
++                    for t in terms:
++                        status = "ДОБАВЛЕН" if any(a.get("original") == t.get("original") for a in export.get("added", [])) else "уже был"
++                        print(f"    * {t.get('original')} -> {t.get('rus')} ({t.get('note')}) [{status}]")
++            except Exception as e:
++                print(f"  [HARVEST] Ошибка вывода отчёта: {e}")
++        else:
++            print(f"  [HARVEST] Предупреждение: harvest-terms завершился с кодом {rc}")
++
++    # 2. REVIEW & POLISH
++    print(f"=== [2/3] REVIEW & POLISH ({datetime.datetime.now().strftime('%H:%M:%S')}) ===")
++    rev_prj = os.path.join(stages_dir, "review")
++    rev_epub_dir = os.path.join(rev_prj, "EPUB")
++    os.makedirs(rev_epub_dir, exist_ok=True)
++    rev_in = os.path.join(rev_epub_dir, f"{ch_stem}_translated_ar.html")
++    rev_out = os.path.join(rev_epub_dir, f"{ch_stem}_translated_ar_reviewed.html")
++    shutil.copy2(src_html, rev_in)
++
++    with open(os.path.join(rev_prj, "translation_map.json"), "w", encoding="utf-8") as fh:
++        json.dump({f"EPUB/{ch_file}": {"_translated_ar.html": f"EPUB/{ch_stem}_translated_ar.html"}}, fh, indent=2)
++
++    def execute_stage(name, prj_dir, prompt_p, log_p, apply_flag=False):
++        stage_provider = rev_provider
++        stage_model = rev_model
++        max_stage_attempts = 4 if fallback_p else 3
++        for attempt in range(1, max_stage_attempts + 1):
++            print(f"  [{name}] попытка {attempt}/{max_stage_attempts} ({stage_provider} / {stage_model})...")
++            cmd = [
++                sys.executable, cli_script, "--compact", "review",
++                "--epub", epub_path, "--project", prj_dir,
++                "--chapters", "translated", "--provider", stage_provider,
++                "--model", stage_model, "--api-key", "DUMMY",
++                "--glossary", glossary, "--prompt-file", prompt_p,
++                "--timeout", str(timeout_sec)
++            ]
++            if apply_flag:
++                cmd.append("--apply")
++            rc, out = run_sub_cmd(cmd, log_p)
++            expected_out = os.path.join(prj_dir, "EPUB", f"{ch_stem}_translated_ar.html" if apply_flag else f"{ch_stem}_translated_ar_reviewed.html")
++            if os.path.isfile(expected_out) and os.path.getsize(expected_out) > 0 and '"ok": true' in out:
++                print(f"  [{name}] успешно -> {expected_out}")
++                return expected_out
++            if stage_provider != fallback_p:
++                is_safety = any(k in out.lower() for k in (
++                    "contentfiltererror", "safety", "content policy", "filter", "blocked", "0 tokens", "пустой ответ"
++                ))
++                if is_safety or attempt >= 2:
++                    reason = "safety filter" if is_safety else "исчерпаны попытки Gemini"
++                    print(f"  [{name}] сбой {stage_provider} ({reason}), переключаемся на fallback {fallback_p} ({fallback_m})...")
++                    stage_provider = fallback_p
++                    stage_model = fallback_m
++                else:
++                    print(f"  [{name}] сетевой сбой {stage_provider}, повторная попытка...")
++            time.sleep(3)
++        raise CliError(f"Стадия {name} не удалась после {max_stage_attempts} попыток.")
++
++    if os.path.isfile(rev_out) and os.path.getsize(rev_out) > 0:
++        print(f"  пропуск: {rev_out} уже существует")
++    else:
++        execute_stage("review", rev_prj, rev_prompt_file, f"/tmp/hr{ch_num}-review.log")
++
++    pol_prj = os.path.join(stages_dir, "polish")
++    pol_epub_dir = os.path.join(pol_prj, "EPUB")
++    os.makedirs(pol_epub_dir, exist_ok=True)
++    pol_in = os.path.join(pol_epub_dir, f"{ch_stem}_translated_ar.html")
++    pol_out = pol_in
++
++    if os.path.isfile(pol_out) and os.path.getsize(pol_out) > 0 and os.path.exists(os.path.join(pol_prj, "prereview_backups")):
++        print(f"  пропуск: {pol_out} уже отполирован")
++    else:
++        with open(os.path.join(pol_prj, "translation_map.json"), "w", encoding="utf-8") as fh:
++            json.dump({f"EPUB/{ch_file}": {"_translated_ar.html": f"EPUB/{ch_stem}_translated_ar.html"}}, fh, indent=2)
++        shutil.copy2(rev_out, pol_in)
++        execute_stage("polish", pol_prj, pol_prompt_file, f"/tmp/hr{ch_num}-polish.log", apply_flag=True)
++
++    # 3. VERIFY PARAGRAPHS
++    print(f"=== [3/3] СВЕРКА АБЗАЦЕВ ({datetime.datetime.now().strftime('%H:%M:%S')}) ===")
++    with zipfile.ZipFile(epub_path) as z:
++        src_raw = z.read(f"EPUB/{ch_file}").decode("utf-8")
++    src_p = len([p.strip() for p in re.findall(r"<p[ >](.*?)</p>", src_raw, flags=re.S) if p.strip()])
++
++    raw = Path(pol_out).read_text(encoding="utf-8")
++    idx = raw.find("<body")
++    body = raw[idx:] if idx != -1 else raw
++    body = re.sub(r"\s*<!--\s*NEW_TERMS.*?-->\s*$", "", body, flags=re.S)
++    paras = re.findall(r"<p>(.*?)</p>", body, flags=re.S)
++    paras = [p.strip() for p in paras if p.strip()]
++    if paras and re.match(r"^Глава\s+\d+:", paras[0]):
++        paras = paras[1:]
++    ru_p = len(paras)
++    matched = (src_p == ru_p)
++    diff = ru_p - src_p
++
++    print("=" * 50)
++    print(f"ИТОГОВАЯ СВЕРКА АБЗАЦЕВ (Глава {ch_num}):")
++    print(f"  Оригинал (EN): {src_p}")
++    print(f"  Полиш    (RU): {ru_p}")
++    if matched:
++        print(f"  Результат:    СОВПАДАЮТ ({ru_p}/{src_p}) [OK]")
++    else:
++        print(f"  Результат:    НЕ СОВПАДАЮТ (разница: {diff:+d}) [ВНИМАНИЕ]")
++        print(f"  [REALIGN] Запуск этапа ИИ для выравнивания структуры (разница: {diff:+d})...")
++        realign_prj = os.path.join(stages_dir, "realign")
++        realign_epub_dir = os.path.join(realign_prj, "EPUB")
++        os.makedirs(realign_epub_dir, exist_ok=True)
++        realign_in = os.path.join(realign_epub_dir, f"{ch_stem}_translated_ar.html")
++        realign_out = os.path.join(realign_epub_dir, f"{ch_stem}_translated_ar.html")
++        shutil.copy2(pol_out, realign_in)
++        with open(os.path.join(realign_prj, "translation_map.json"), "w", encoding="utf-8") as fh:
++            json.dump({f"EPUB/{ch_file}": {"_translated_ar.html": f"EPUB/{ch_stem}_translated_ar.html"}}, fh, indent=2)
++        try:
++            execute_stage("realign", realign_prj, realign_prompt_file, f"/tmp/hr{ch_num}-realign.log", apply_flag=True)
++            if os.path.isfile(realign_out) and os.path.getsize(realign_out) > 0:
++                raw_realign = Path(realign_out).read_text(encoding="utf-8")
++                idx_r = raw_realign.find("<body")
++                body_r = raw_realign[idx_r:] if idx_r != -1 else raw_realign
++                new_ru_p = len(re.findall(r"<p[ >]", body_r))
++                print(f"  [REALIGN] Результат выравнивания: {new_ru_p} <p> (цель: {src_p})")
++                if new_ru_p == src_p:
++                    print("  [REALIGN] Успешно! Структура выровнена 1:1.")
++                    shutil.copy2(realign_out, pol_out)
++                    ru_p = new_ru_p
++                    diff = 0
++                    matched = True
++                else:
++                    print(f"  [REALIGN] Модель не свела разницу (осталось {abs(new_ru_p - src_p)}).")
++        except Exception as e:
++            print(f"  [REALIGN] Ошибка этапа выравнивания: {e}")
++    print("=" * 50)
++    print(f"Готовый файл: {pol_out}")
++
++    insert_res = None
++    if getattr(args, "insert_epub", False):
++        print(f"Вшивание главы {ch_num} в RU EPUB...")
++        ins_cmd = [
++            sys.executable, "/home/almaz/projects/hundred-reigns/insert_chapter.py",
++            "--number", str(ch_num),
++            "--input", pol_out,
++            "--source-epub", epub_path
++        ]
++        rc, out = run_sub_cmd(ins_cmd)
++        insert_res = {"ok": rc == 0, "output": out}
++
++    publish_res = None
++    if getattr(args, "publish", False):
++        print(f"Публикация в WebDAV...")
++        pub_cmd = ["sudo", sys.executable, "/home/almaz/projects/hundred-reigns/publish_epub.py"]
++        rc, out = run_sub_cmd(pub_cmd)
++        publish_res = {"ok": rc == 0, "output": out}
++
++    return {
++        "ok": matched,
++        "chapter": ch_num,
++        "chapter_file": ch_file,
++        "polished_file": pol_out,
++        "paragraphs_match": matched,
++        "src_paragraphs": src_p,
++        "ru_paragraphs": ru_p,
++        "diff": diff,
++        "insert_result": insert_res,
++        "publish_result": publish_res
++    }
++
++
+ def build_parser() -> argparse.ArgumentParser:
+     parser = argparse.ArgumentParser(
+         prog="translator-cli",
+@@ -1444,7 +1808,7 @@ def build_parser() -> argparse.ArgumentParser:
+             raise CliError(f"Project folder not found: {project_folder}")
+ 
+         tail_re = re.compile(
+-            r"<!--NEW_TERMS\s*(\[.*?\])\s*-->\s*$", re.DOTALL
++            r"<!--\s*NEW_TERMS\s*(\[.*?\])\s*-->\s*$", re.DOTALL
+         )
+         scan_root = project_folder
+         harvested: dict[str, list] = {}
+@@ -1570,6 +1934,23 @@ def build_parser() -> argparse.ArgumentParser:
+     build_epub.add_argument("--strict", action="store_true", help="Fail if any selected source chapter has no translation.")
+     build_epub.set_defaults(func=command_build_epub)
+ 
++    pipeline = subparsers.add_parser("pipeline", help="Run automated end-to-end chapter pipeline (translate -> review -> polish -> verify).")
++    _add_common_project_args(pipeline)
++    _add_common_run_args(pipeline)
++    pipeline.add_argument("--fallback-provider", default="agentrouter", help="Fallback provider when primary fails.")
++    pipeline.add_argument("--fallback-model", default="DeepSeek V4 Flash (AR)", help="Fallback model.")
++    pipeline.add_argument("--review-provider", default=None, help="Provider for review/polish (defaults to primary provider).")
++    pipeline.add_argument("--review-model", default=None, help="Model for review/polish (defaults to primary model).")
++    pipeline.add_argument("--review-prompt-file", default="config/hundred_reigns_review_prompt.txt", help="Review prompt file.")
++    pipeline.add_argument("--polish-prompt-file", default="config/hundred_reigns_polish_prompt.txt", help="Polish prompt file.")
++    pipeline.add_argument("--realign-prompt-file", default="config/hundred_reigns_realign_prompt.txt", help="Realign prompt file.")
++    pipeline.add_argument('--retries', type=int, default=2, help='Max attempts for primary provider before fallback (default: 2)')
++    pipeline.add_argument('--insert-epub', action='store_true', help='Insert finished chapter into RU EPUB')
++    pipeline.add_argument('--publish', action='store_true', help='Publish RU EPUB to WebDAV')
++    pipeline.add_argument("--timeout", type=int, default=600, help="Stage timeout in seconds.")
++    pipeline.add_argument("--verbose", action="store_true", help="Verbose logging.")
++    pipeline.set_defaults(func=command_pipeline)
++
+     return parser
+ 
+ 
+diff --git a/gemini_translator/core/worker.py b/gemini_translator/core/worker.py
+index c955159..1ccc173 100644
+--- a/gemini_translator/core/worker.py
++++ b/gemini_translator/core/worker.py
+@@ -659,7 +659,17 @@ class UniversalWorker(QObject):
+                 if (failure_count // 2) % 2 != 0:
+                     use_stream = not default_stream_mode
+                 
++                # На попытках 3+ переключаем Gemini agy с high на medium для предотвращения таймаутов
++                if getattr(self, 'api_provider_name', None) == 'agy' and hasattr(self, 'api_handler_instance'):
++                    if not hasattr(self, '_base_model_id'):
++                        self._base_model_id = getattr(self.api_handler_instance, 'model_id', None) or getattr(self, 'model_id', '')
++                    if self._base_model_id and '-high' in self._base_model_id:
++                        self.api_handler_instance.model_id = self._base_model_id.replace('-high', '-medium')
++
+                 should_log_strategy = True
++            else:
++                if hasattr(self, '_base_model_id') and hasattr(self, 'api_handler_instance'):
++                    self.api_handler_instance.model_id = self._base_model_id
+             
+             # Если failure_count == 1 (вторая попытка), мы сюда не заходим,
+             # use_stream остается default (STREAM), и лог стратегии не пишется (как и должно быть).
+@@ -676,10 +686,12 @@ class UniversalWorker(QObject):
+         
+         if should_log_strategy:
+             mode_text = "STREAM" if use_stream else "SINGLE"
++            active_model = getattr(getattr(self, 'api_handler_instance', None), 'model_id', None) or getattr(self, 'model_id', None)
++            model_suffix = f", модель: {active_model}" if active_model else ""
+             # failure_count - это количество уже произошедших ошибок.
+             # Значит, текущая попытка - это failure_count + 1.
+             self._post_event('log_message', {
+-                'message': f"⚙️ [STRATEGY] Задача '{task_name}': Попытка #{failure_count + 1}. Выбран режим API: {mode_text}"
++                'message': f"⚙️ [STRATEGY] Задача '{task_name}': Попытка #{failure_count + 1}. Выбран режим API: {mode_text}{model_suffix}"
+             })
+         
+         # --- Делегирование выполнения стратегии ---
+diff --git a/gemini_translator/core/worker_helpers/response_parser.py b/gemini_translator/core/worker_helpers/response_parser.py
+index d9289d7..3c0236c 100644
+--- a/gemini_translator/core/worker_helpers/response_parser.py
++++ b/gemini_translator/core/worker_helpers/response_parser.py
+@@ -265,8 +265,28 @@ class ResponseParser:
+                         is_valid, reason, validated_html = self.validator_func(original_with_placeholders, raw_body_from_ai)
+                         
+                         if not is_valid:
+-                            report['failed'].append((chapter_path, f"Валидация: {reason}"))
+-                            continue
++                            from gemini_translator.utils.realign import try_realign_translated_html
++                            realigned = try_realign_translated_html(
++                                original_with_placeholders, raw_body_from_ai, worker=self.worker
++                            )
++                            if realigned:
++                                is_valid_re, reason_re, val_re = self.validator_func(
++                                    original_with_placeholders, realigned
++                                )
++                                if is_valid_re:
++                                    is_valid = True
++                                    validated_html = val_re
++                        
++                        if not is_valid:
++                            orig_l = len(original_with_placeholders)
++                            trans_l = len(validated_html or raw_body_from_ai)
++                            if trans_l > 200 and (orig_l == 0 or trans_l >= orig_l * 0.35):
++                                self.log(f"⚠️ [WORKER] Несоответствие структуры ({reason}), но перевод главы '{chapter_path}' сохранён ({trans_l} символов) для последующего Re-align в конвейере.")
++                                is_valid = True
++                                validated_html = validated_html or raw_body_from_ai
++                            else:
++                                report['failed'].append((chapter_path, f"Валидация: {reason}"))
++                                continue
+                         
+                         # Если валидация прошла (возможно, после авто-лечения),
+                         # обновляем контент на исправленную версию перед восстановлением медиа
+diff --git a/gemini_translator/core/worker_helpers/taskers/epub_chunk_processor.py b/gemini_translator/core/worker_helpers/taskers/epub_chunk_processor.py
+index 16c5b1d..081dd2e 100644
+--- a/gemini_translator/core/worker_helpers/taskers/epub_chunk_processor.py
++++ b/gemini_translator/core/worker_helpers/taskers/epub_chunk_processor.py
+@@ -1,6 +1,9 @@
+ # -*- coding: utf-8 -*-
+ 
+ import os
++import logging
++
++logger = logging.getLogger(__name__)
+ 
+ from .base_processor import BaseTaskProcessor
+ from gemini_translator.api.errors import ValidationFailedError, PartialGenerationError
+@@ -116,11 +119,19 @@ class EpubChunkProcessor(BaseTaskProcessor):
+                     original_chunk_with_placeholders = self.worker.prompt_builder._replace_media_with_placeholders(content_to_translate_for_api)
+                     is_valid, reason, validated_chunk = validate_html_structure(original_chunk_with_placeholders, final_restored_html)
+                     if not is_valid:
+-                        self._raise_validation_error(
+-                            f"JSON chunk не прошел финальную HTML-валидацию: {reason}",
+-                            raw_response
+-                        )
+-                    final_restored_html = validated_chunk
++                        orig_len = len(original_chunk_with_placeholders)
++                        trans_len = len(validated_chunk or final_restored_html)
++                        if trans_len > 100 and (orig_len == 0 or trans_len >= orig_len * 0.35):
++                            logger.warning(
++                                f"⚠️ [WORKER] Несоответствие структуры чанка ({reason}), но перевод сохранён ({trans_len} симв.) для последующего Re-align."
++                            )
++                            is_valid = True
++                        else:
++                            self._raise_validation_error(
++                                f"JSON chunk не прошел финальную HTML-валидацию: {reason}",
++                                raw_response
++                            )
++                    final_restored_html = validated_chunk or final_restored_html
+ 
+                 noise_report = estimate_translation_noise(content_to_translate_for_api, source_payload)
+                 self.worker._post_event('log_message', {
+@@ -203,11 +214,19 @@ class EpubChunkProcessor(BaseTaskProcessor):
+         if not getattr(self.worker, "force_accept", False):
+             is_valid, reason, validated_chunk = validate_html_structure(original_chunk_with_placeholders, accumulated_text)
+             if not is_valid:
+-                self._raise_validation_error(
+-                    f"Финальный текст не прошел валидацию: {reason}",
+-                    accumulated_raw_html or newly_generated_part_raw
+-                )
+-            accumulated_text = validated_chunk
++                orig_len = len(original_chunk_with_placeholders)
++                trans_len = len(validated_chunk or accumulated_text)
++                if trans_len > 100 and (orig_len == 0 or trans_len >= orig_len * 0.35):
++                    logger.warning(
++                        f"⚠️ [WORKER] Несоответствие структуры финального текста ({reason}), но перевод сохранён ({trans_len} симв.) для последующего Re-align."
++                    )
++                    is_valid = True
++                else:
++                    self._raise_validation_error(
++                        f"Финальный текст не прошел валидацию: {reason}",
++                        accumulated_raw_html or newly_generated_part_raw
++                    )
++            accumulated_text = validated_chunk or accumulated_text
+ 
+         final_restored_html = self.worker.response_parser._restore_media_from_placeholders(
+             translated_content=accumulated_text,
+diff --git a/gemini_translator/core/worker_helpers/taskers/epub_single_file_processor.py b/gemini_translator/core/worker_helpers/taskers/epub_single_file_processor.py
+index d297c7b..f32afb6 100644
+--- a/gemini_translator/core/worker_helpers/taskers/epub_single_file_processor.py
++++ b/gemini_translator/core/worker_helpers/taskers/epub_single_file_processor.py
+@@ -189,10 +189,35 @@ class EpubSingleFileProcessor(BaseTaskProcessor):
+         if not getattr(self.worker, "force_accept", False):
+             is_valid, reason, validated_html = validate_html_structure(original_body_with_placeholders, cleaned_response)
+             if not is_valid:
+-                self._raise_validation_error(
+-                    f"Ответ не прошел валидацию: {reason}",
+-                    raw_response or cleaned_response
++                from gemini_translator.utils.realign import try_realign_translated_html
++                self.logger.warning(f"🔄 [REALIGN] Попытка выравнивания структуры через модель ({reason}).")
++                realigned = try_realign_translated_html(
++                    original_body_with_placeholders, cleaned_response, worker=self.worker
+                 )
++                if realigned:
++                    is_valid_re, reason_re, val_re = validate_html_structure(
++                        original_body_with_placeholders, realigned
++                    )
++                    if is_valid_re:
++                        self.logger.info("✅ [REALIGN] Структура успешно выровнена моделью.")
++                        is_valid = True
++                        validated_html = val_re
++                    else:
++                        self.logger.warning(f"[REALIGN] Результат Re-align не прошел валидацию: {reason_re}")
++                        validated_html = val_re
++            if not is_valid:
++                orig_len = len(original_body_with_placeholders)
++                trans_len = len(validated_html or cleaned_response)
++                is_substantial = trans_len > 200 and (orig_len == 0 or trans_len >= orig_len * 0.35)
++                if is_substantial:
++                    self.logger.warning(
++                        f"⚠️ [WORKER] Несоответствие структуры ({reason}), но перевод сохранён ({trans_len} символов) для последующего Re-align в конвейере."
++                    )
++                else:
++                    self._raise_validation_error(
++                        f"Ответ не прошел валидацию: {reason}",
++                        raw_response or cleaned_response
++                    )
+             cleaned_response = validated_html
+ 
+         restored_body = self.worker.response_parser._restore_media_from_placeholders(
+diff --git a/gemini_translator/review.py b/gemini_translator/review.py
+index 3ac2840..c893d32 100644
+--- a/gemini_translator/review.py
++++ b/gemini_translator/review.py
+@@ -326,7 +326,8 @@ def _call_model_agy(model_id: str, prompt: str, timeout: int = DEFAULT_TIMEOUT)
+         raise RuntimeError(f"agy failed with code {proc.returncode}: {err}")
+ 
+     out_lines = proc.stdout.decode("utf-8", "replace").splitlines()
+-    content = ""
++    collected_text = ""
++    final_result = ""
+     for line in out_lines:
+         line = line.strip()
+         if not line:
+@@ -339,13 +340,14 @@ def _call_model_agy(model_id: str, prompt: str, timeout: int = DEFAULT_TIMEOUT)
+             continue
+         if event.get("event") == "result":
+             res = event.get("result") or {}
+-            content = res.get("response") or ""
+-            break
++            final_result = res.get("response") or ""
+         elif event.get("event") == "step_update":
+             step = event.get("step_update") or {}
+             delta = step.get("text_delta") or ""
+             if delta:
+-                content += delta
++                collected_text += delta
++
++    content = collected_text if len(collected_text.strip()) >= len(final_result.strip()) else final_result
+ 
+     if not content:
+         raise EmptyContentError(f"пустой ответ agy (code={proc.returncode})")
+@@ -532,7 +534,7 @@ def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
+     # from split tags, `…` fragments) — the source chapter's own count, which is
+     # what assembly splices against. Growth past the input is always rejected.
+     merged = src_paras - out_paras if out_paras < src_paras else 0
+-    if out_paras != src_paras and not (merged > 0 and out_paras == en_paras):
++    if out_paras != src_paras and out_paras != en_paras:
+         return {"chapter": chapter_rel, "ok": False,
+                 "status": "paragraph_mismatch",
+                 "source_paragraphs": src_paras, "review_paragraphs": out_paras,
+diff --git a/gemini_translator/review.py.bak-pre-reasoning-budget b/gemini_translator/review.py.bak-pre-reasoning-budget
+deleted file mode 100644
+index f2957de..0000000
+--- a/gemini_translator/review.py.bak-pre-reasoning-budget
++++ /dev/null
+@@ -1,282 +0,0 @@
+-"""
+-Review stage: verify and repair a finished translation against the CN source.
+-
+-Design notes
+-------------
+-This is a separate pipeline stage, not a translation mode. It consumes what
+-`translate` produced and emits a corrected HTML file per chapter, so a package of
+-freshly translated chapters can be verified before it is inserted into the book.
+-
+-Why a dedicated prompt instead of reusing the translation prompt: the translation
+-prompt is a 900-line literary brief that tells the model how to *write*. Review
+-needs the opposite framing -- minimal intervention, four defect classes, and an
+-explicit ban on stylistic rewriting. Mixing the two makes the model re-translate
+-the chapter, which destroys already-approved wording.
+-
+-Glossary scoping: only terms whose CN key occurs in the chapter are injected.
+-Measured on this book, that is a median of 47 entries out of 1773, i.e. ~1.2k
+-tokens instead of ~60k, and it keeps unrelated `НЕ "..."` prohibitions from
+-misfiring on words the chapter never uses.
+-
+-Safety invariant: the paragraph count must survive. A review reply with a
+-different number of <p> elements is rejected and the chapter is left untouched,
+-because a merged or split paragraph breaks EPUB assembly and silently changes
+-the text the user already read.
+-"""
+-
+-from __future__ import annotations
+-
+-import html
+-import json
+-import os
+-import re
+-import urllib.error
+-import urllib.request
+-import zipfile
+-from pathlib import Path
+-
+-DEFAULT_TIMEOUT = 900
+-ENV_FILE = Path.home() / ".hermes" / ".env"
+-
+-
+-# ------------------------------------------------------------------ source text
+-
+-def cn_chapter_text(epub_path: str, chapter_rel: str) -> str:
+-    """Plain text of one chapter of the CN source EPUB."""
+-    with zipfile.ZipFile(epub_path) as z:
+-        names = z.namelist()
+-        if chapter_rel in names:
+-            target = chapter_rel
+-        else:
+-            base = os.path.basename(chapter_rel)
+-            matches = [n for n in names if os.path.basename(n) == base]
+-            if not matches:
+-                raise FileNotFoundError(f"нет {chapter_rel} в {epub_path}")
+-            target = matches[0]
+-        raw = z.read(target).decode("utf-8", "replace")
+-
+-    paras = []
+-    for p in re.findall(r"<p[^>]*>(.*?)</p>", raw, re.S):
+-        t = html.unescape(re.sub(r"<[^>]+>", "", p))
+-        t = re.sub(r"\s+", " ", t).strip()
+-        if t:
+-            paras.append(t)
+-    return "\n".join(paras)
+-
+-
+-def count_paragraphs(html_text: str) -> int:
+-    return len(re.findall(r"<p[^>]*>", html_text, re.I))
+-
+-
+-# --------------------------------------------------------------------- glossary
+-
+-def scope_glossary(glossary: dict[str, dict], cn_text: str,
+-                   max_terms: int = 400) -> list[dict]:
+-    """Keep only entries whose CN key actually appears in this chapter."""
+-    hits = []
+-    for original, entry in glossary.items():
+-        if not original:
+-            continue
+-        if original in cn_text:
+-            hits.append({
+-                "original": original,
+-                "rus": (entry or {}).get("rus", ""),
+-                "note": (entry or {}).get("note", ""),
+-            })
+-    # Longest keys first: compounds should be read before their components.
+-    hits.sort(key=lambda e: -len(e["original"]))
+-    return hits[:max_terms]
+-
+-
+-def format_glossary(entries: list[dict]) -> str:
+-    if not entries:
+-        return "(в этой главе глоссарных терминов не найдено)"
+-    lines = []
+-    for e in entries:
+-        note = f"  — {e['note']}" if e.get("note") else ""
+-        lines.append(f"{e['original']} = {e['rus']}{note}")
+-    return "\n".join(lines)
+-
+-
+-# ----------------------------------------------------------------- provider I/O
+-
+-def _load_env_pairs(prefix: str) -> dict[str, str]:
+-    if not ENV_FILE.exists():
+-        return {}
+-    out = {}
+-    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+-        line = line.strip()
+-        if line.startswith(prefix) and "=" in line:
+-            k, v = line.split("=", 1)
+-            out[k.strip()] = v.strip().strip('"').strip("'")
+-    return out
+-
+-
+-def resolve_endpoint(provider_id: str, provider_conf: dict) -> str:
+-    base = (provider_conf or {}).get("base_url") or ""
+-    if not base:
+-        raise ValueError(
+-            f"у провайдера {provider_id} нет base_url — "
+-            f"стадия review поддерживает только OpenAI-совместимые эндпоинты"
+-        )
+-    return base
+-
+-
+-PLACEHOLDER_KEYS = ("DUMMY", "NONE", "X", "-", "")
+-
+-
+-def build_headers(provider_id: str, api_key: str | None) -> dict[str, str]:
+-    headers = {"Content-Type": "application/json"}
+-    # Placeholder keys are the documented convention for proxy providers
+-    # (--api-key DUMMY), so they must never win over a real credential.
+-    real_key = None
+-    if api_key and api_key.strip().upper() not in PLACEHOLDER_KEYS:
+-        real_key = api_key.strip()
+-
+-    if provider_id == "gumloop":
+-        env = _load_env_pairs("GUMLOOP_")
+-        key = real_key or env.get("GUMLOOP_API_KEY")
+-        uid = env.get("GUMLOOP_USER_ID")
+-        if not key or not uid:
+-            raise ValueError("нужны GUMLOOP_API_KEY и GUMLOOP_USER_ID "
+-                             "(настройки или ~/.hermes/.env)")
+-        headers["Authorization"] = f"Bearer {key}"
+-        headers["x-auth-key"] = uid
+-        return headers
+-
+-    headers["Authorization"] = f"Bearer {real_key or 'DUMMY'}"
+-    return headers
+-
+-
+-def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
+-               max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
+-    # DS4F reasoning drift (2026-09-11): reasoning is now the default upstream
+-    # and burns the whole max_tokens budget on reasoning_content, leaving an
+-    # empty content field. Review calls go through this raw path (not the
+-    # agentrouter handler), so the effort cap must be set here as well.
+-    # The budget must also cover both reasoning AND content.
+-    reasoning_off = "deepseek" in str(model_id).lower()
+-    payload = {
+-        "model": model_id,
+-        "max_tokens": max_tokens,
+-        "messages": [{"role": "user", "content": prompt}],
+-    }
+-    if reasoning_off:
+-        payload["reasoning_effort"] = "none"
+-
+-    req = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"),
+-                                 headers=headers)
+-    try:
+-        with urllib.request.urlopen(req, timeout=timeout) as r:
+-            payload = json.loads(r.read().decode("utf-8"))
+-    except urllib.error.HTTPError as e:
+-        detail = e.read().decode("utf-8", "replace")[:500]
+-        raise RuntimeError(f"HTTP {e.code}: {detail}")
+-    except urllib.error.URLError as e:
+-        raise RuntimeError(f"нет соединения: {e}")
+-
+-    choices = payload.get("choices") or []
+-    if not choices:
+-        raise RuntimeError(f"пустой ответ: {json.dumps(payload)[:300]}")
+-    return (choices[0].get("message") or {}).get("content") or ""
+-
+-
+-# --------------------------------------------------------------- reply cleaning
+-
+-def extract_html(reply: str) -> str:
+-    """Strip markdown fences and leading prose the model may have added."""
+-    text = reply.strip()
+-    fenced = re.search(r"```(?:html)?\s*(.+?)```", text, re.S)
+-    if fenced:
+-        text = fenced.group(1).strip()
+-    # Drop anything before the first tag so a stray preamble cannot leak in.
+-    first = re.search(r"<(?:\?xml|!DOCTYPE|html|body|div|h1|p)\b", text, re.I)
+-    if first:
+-        text = text[first.start():]
+-    return text.strip()
+-
+-
+-# ------------------------------------------------------------------ single pass
+-
+-def paragraph_texts(html_text: str) -> list[str]:
+-    """Plain text of each <p>, in document order."""
+-    out = []
+-    for m in re.findall(r"<p[^>]*>(.*?)</p>", html_text, re.S):
+-        t = html.unescape(re.sub(r"<[^>]+>", "", m))
+-        out.append(re.sub(r"\s+", " ", t).strip())
+-    return out
+-
+-
+-def diff_paragraphs(before_html: str, after_html: str,
+-                    max_chars: int = 400) -> list[dict]:
+-    """Per-paragraph edit list, so the user can rule on each change.
+-
+-    Compared as plain text rather than raw HTML so that tag-level noise does not
+-    show up as an edit; the paragraph-count invariant guarantees the two lists
+-    line up index for index.
+-    """
+-    a = paragraph_texts(before_html)
+-    b = paragraph_texts(after_html)
+-    edits = []
+-    for i, (x, y) in enumerate(zip(a, b)):
+-        if x != y:
+-            edits.append({
+-                "paragraph": i,
+-                "before": x[:max_chars],
+-                "after": y[:max_chars],
+-            })
+-    return edits
+-
+-
+-def review_chapter(*, cn_epub: str, chapter_rel: str, translated_html: str,
+-                   glossary: dict[str, dict], prompt_template: str,
+-                   endpoint: str, headers: dict, model_id: str,
+-                   project_rules: str = "",
+-                   timeout: int = DEFAULT_TIMEOUT) -> dict:
+-    """Review one chapter. Returns a result dict; never raises on model issues."""
+-    cn_text = cn_chapter_text(cn_epub, chapter_rel)
+-    entries = scope_glossary(glossary, cn_text)
+-    src_paras = count_paragraphs(translated_html)
+-
+-    prompt = prompt_template
+-    for key, value in (("{glossary}", format_glossary(entries)),
+-                       ("{rules}", project_rules or "(дополнительных правил нет)"),
+-                       ("{source}", cn_text),
+-                       ("{text}", translated_html)):
+-        if key in prompt:
+-            prompt = prompt.replace(key, value)
+-
+-    # Output must fit the whole chapter HTML with headroom; a tight cap
+-    # truncates the reply and the paragraph guard then rejects a valid review.
+-    budget = max(8000, int(len(translated_html) / 2))
+-
+-    try:
+-        reply = call_model(endpoint, headers, model_id, prompt, budget, timeout)
+-    except Exception as exc:
+-        return {"chapter": chapter_rel, "ok": False, "status": "api_error",
+-                "error": str(exc), "glossary_terms": len(entries)}
+-
+-    cleaned = extract_html(reply)
+-    out_paras = count_paragraphs(cleaned)
+-
+-    if not cleaned or out_paras == 0:
+-        return {"chapter": chapter_rel, "ok": False, "status": "empty_reply",
+-                "glossary_terms": len(entries), "reply_head": reply[:200]}
+-
+-    if out_paras != src_paras:
+-        # Paragraph count is the one invariant EPUB assembly depends on.
+-        return {"chapter": chapter_rel, "ok": False,
+-                "status": "paragraph_mismatch",
+-                "source_paragraphs": src_paras, "review_paragraphs": out_paras,
+-                "glossary_terms": len(entries)}
+-
+-    changed = cleaned.strip() != translated_html.strip()
+-    edits = diff_paragraphs(translated_html, cleaned) if changed else []
+-    return {"chapter": chapter_rel, "ok": True,
+-            "status": "changed" if changed else "unchanged",
+-            "source_paragraphs": src_paras, "review_paragraphs": out_paras,
+-            "glossary_terms": len(entries),
+-            "cn_chars": len(cn_text),
+-            "edit_count": len(edits),
+-            "edits": edits,
+-            "html": cleaned}
+diff --git a/gemini_translator/utils/text.py b/gemini_translator/utils/text.py
+index dcae287..f30405a 100644
+--- a/gemini_translator/utils/text.py
++++ b/gemini_translator/utils/text.py
+@@ -2850,6 +2850,11 @@ def validate_html_structure(original_html, translated_html):
+         return False, "API вернуло пустой ответ.", translated_html
+     
+     final_translated_html = translated_html
++    if "```" in final_translated_html:
++        m_fence = re.search(r"```(?:html)?\s*(.+?)```", final_translated_html, re.S)
++        if m_fence:
++            final_translated_html = m_fence.group(1).strip()
++
+     normalized_orig = prettify_html_for_ai(original_html)
+     orig_lower = normalized_orig.lower().strip()
+     final_translated_html = normalize_translated_body_wrapper(original_html, final_translated_html)

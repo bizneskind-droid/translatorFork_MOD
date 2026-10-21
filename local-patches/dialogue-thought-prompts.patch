@@ -1,0 +1,51 @@
+diff --git a/config/hundred_reigns_polish_prompt.txt b/config/hundred_reigns_polish_prompt.txt
+index 53a55ff..c49c965 100644
+--- a/config/hundred_reigns_polish_prompt.txt
++++ b/config/hundred_reigns_polish_prompt.txt
+@@ -103,6 +103,11 @@ LitRPG-блоки («Вы открыли Класс...», `Сила B, Живу
+   НЕ получает (`«…магию на ваших вещах.» In truth, Simon had…` → «…вещах». На
+   самом деле Саймон…», НЕ «— На самом деле Саймон…»);
+ - мысли и цитаты — в «ёлочках», курсив — как в источнике;
++- разрыв прямой речи мыслями или невысказанным монологом внутри одного <p>:
++  если прямая речь в оригинале прерывается мыслями героя, а затем продолжается
++  («“Speech 1.” Thoughts. “Speech 2.”»), обособлять внутренние мысли курсивом и тире:
++  «— Реплика. — <em>Мысли героя.</em> — Реплика.».
++  **СТРОГО:** В веб-новелле автор часто пишет невысказанные мысли между репликами простым текстом без курсива («“Yes, I see that now.” Although consuming the Crafter... “I hoped...”»). В русском переводе их ОБЯЗАТЕЛЬНО обособлять курсивом `<em>...</em>` и тире с обеих сторон, ДАЖЕ ЕСЛИ в EN-оригинале не было тега `<em>`. Не отменять курсив из-за правила «курсив как в источнике» и не оставлять мысли слитными со звучащей речью;
+ - телепатия — это «ёлочки», а НЕ тире: в источнике телепатическая речь
+   выделена курсивом (`<em>“Can you at least tell me who’ll be involved in the
+   operation?”</em>`), в книге она идёт как `«Можешь хотя бы сказать мне, кто
+diff --git a/config/hundred_reigns_prompt.txt b/config/hundred_reigns_prompt.txt
+index 36fa664..a2d0582 100644
+--- a/config/hundred_reigns_prompt.txt
++++ b/config/hundred_reigns_prompt.txt
+@@ -49,6 +49,14 @@ Consult this data for vocabulary consistency.
+ *   If the source marks direct speech with a dash (`— Нет.`, `— сказал он`), use the same classical Russian dash punctuation in the same positions: speech opens with `—`, attribution joins with `, —`.
+ *   If the source marks speech with a special operator (`─` U+2500), use `—` (em dash, U+2014). NEVER emit `─` (U+2500) in the output — it is a box-drawing character, not a Russian dash.
+ *   If the source wraps thoughts/quotes/inscriptions in guillemets («...»), keep guillemets. If the source uses italics for thoughts, keep the italics (translate the visible text inside).
++*   **Speech interrupted by thoughts/narration within a single `<p>`:**
++    If direct speech in the source is interrupted by the character's unvoiced thoughts / internal monologue and then resumes within the same `<p>` (e.g. `“Speech 1.” Unspoken thoughts / reflections. “Speech 2.”`):
++    Wrap the inner thoughts in italics (`<em>...</em>`) and separate with dashes:
++    `— Реплика. — <em>Внутренние мысли персонажа.</em> — Реплика.`
++    **CRITICAL:** In English web serials, author often writes unvoiced thoughts without italics between quotes. You MUST wrap them in `<em>...</em>` and dashes EVEN IF the English source has no `<em>` tag! Never leave thoughts un-italicized or glued to spoken dialogue (e.g. `— Реплика. Мысли...` or `— Реплика. — Мысли без курсива. — Реплика`).
++    This clearly distinguishes unvoiced internal reflections from spoken dialogue while preserving the 1:1 `<p>` paragraph count.
++*   **Unvoiced thoughts / internal monologue (`thought Simon` / `he realized`):**
++    When a character is thinking to themselves rather than speaking out loud, render the thought in italics or guillemets (e.g. `<em>Труп</em>, — подумал Саймон` or `«Труп», — подумал Саймон`) rather than an open dialogue dash (`— Труп`), so thoughts are never confused with spoken dialogue.
+ *   Do not invent a new punctuation scheme, do not convert one scheme into another, do not add or remove quotation marks.
+ *   **Ellipsis, dashes, capitalization of the first speech word:** copy the source's behavior.
+ 
+diff --git a/config/hundred_reigns_review_prompt.txt b/config/hundred_reigns_review_prompt.txt
+index 95d5812..12cd401 100644
+--- a/config/hundred_reigns_review_prompt.txt
++++ b/config/hundred_reigns_review_prompt.txt
+@@ -160,6 +160,11 @@ A, ...`), перки, титулы, уведомления — держи в н
+   «…магию на ваших вещах». На самом деле Саймон поручил Душару… (НЕ
+   «— На самом деле Саймон поручил…»: это рассказчик, а не реплика);
+ - мысли и цитаты — в «ёлочках», если так в источнике; курсив — как в источнике;
++- разрыв прямой речи мыслями или невысказанным монологом внутри одного <p>:
++  если прямая речь в оригинале прерывается мыслями героя, а затем продолжается
++  («“Speech 1.” Thoughts. “Speech 2.”»), обособлять внутренние мысли курсивом и тире:
++  «— Реплика. — <em>Мысли героя.</em> — Реплика.».
++  **СТРОГО:** В веб-новелле автор часто пишет невысказанные мысли между репликами простым текстом без курсива («“Yes, I see that now.” Although consuming the Crafter... “I hoped...”»). В русском переводе их ОБЯЗАТЕЛЬНО обособлять курсивом `<em>...</em>` и тире с обеих сторон, ДАЖЕ ЕСЛИ в EN-оригинале не было тега `<em>`. Не отменять курсив из-за правила «курсив как в источнике» и не оставлять мысли слитными со звучащей речью;
+ - телепатия — это «ёлочки», а НЕ тире: в источнике телепатическая речь
+   выделена курсивом (`<em>“Can you at least tell me who’ll be involved in the
+   operation?”</em>`), в книге она идёт как `«Можешь хотя бы сказать мне, кто

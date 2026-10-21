@@ -2850,6 +2850,11 @@ def validate_html_structure(original_html, translated_html):
         return False, "API вернуло пустой ответ.", translated_html
     
     final_translated_html = translated_html
+    if "```" in final_translated_html:
+        m_fence = re.search(r"```(?:html)?\s*(.+?)```", final_translated_html, re.S)
+        if m_fence:
+            final_translated_html = m_fence.group(1).strip()
+
     normalized_orig = prettify_html_for_ai(original_html)
     orig_lower = normalized_orig.lower().strip()
     final_translated_html = normalize_translated_body_wrapper(original_html, final_translated_html)

@@ -1582,6 +1582,9 @@ def command_pipeline(args) -> dict:
                     terms = h_data.get("terms", [])
                     export = h_data.get("export") or {}
                     added_count = export.get("added_count", 0)
+                    for c in h_data.get("conflicts") or []:
+                        print(f"  [HARVEST] КОНФЛИКТ {c['original']}: оставлено '{c['kept']['rus']}' "
+                              f"({c['kept']['role']}), отброшено '{c['dropped']['rus']}' ({c['dropped']['role']}) — сверить вручную")
                     print(f"  [HARVEST] Предложено терминов: {len(terms)}, добавлено в глоссарий: {added_count}")
                     for t in terms:
                         status = "ДОБАВЛЕН" if any(a.get("original") == t.get("original") for a in export.get("added", [])) else "уже был"
@@ -1816,8 +1819,11 @@ def build_parser() -> argparse.ArgumentParser:
         if not os.path.isdir(project_folder):
             raise CliError(f"Project folder not found: {project_folder}")
 
+        # Хвостов в файле может быть несколько: переводчик пишет свой после
+        # </html>, ревью дописывает второй. Ищем ВСЕ и срезаем все, иначе
+        # первый остаётся в тексте и утекает в EPUB комментарием.
         tail_re = re.compile(
-            r"<!--\s*NEW_TERMS\s*(\[.*?\])\s*-->\s*$", re.DOTALL
+            r"<!--\s*NEW_TERMS\s*(\[.*?\])\s*-->", re.DOTALL
         )
         scan_root = project_folder
         harvested: dict[str, list] = {}
@@ -1826,7 +1832,9 @@ def build_parser() -> argparse.ArgumentParser:
 
         for dirpath, _dirnames, filenames in os.walk(scan_root):
             for fname in filenames:
-                if "_translated_" not in fname or not fname.endswith((".html", ".xhtml")):
+                if not fname.endswith((".html", ".xhtml")):
+                    continue
+                if "_translated_" not in fname and "_reviewed" not in fname:
                     continue
                 fpath = os.path.join(dirpath, fname)
                 try:
@@ -1835,49 +1843,65 @@ def build_parser() -> argparse.ArgumentParser:
                 except OSError as exc:
                     parse_errors.append({"file": fname, "error": str(exc)})
                     continue
-                m = tail_re.search(content.rstrip() + "\n")
-                if not m:
+                matches = list(tail_re.finditer(content))
+                if not matches:
                     continue
                 rel = os.path.relpath(fpath, project_folder)
-                try:
-                    terms = json.loads(m.group(1))
-                    if not isinstance(terms, list):
-                        raise ValueError("not a JSON array")
-                except (ValueError, json.JSONDecodeError) as exc:
-                    parse_errors.append({"file": rel, "error": f"bad NEW_TERMS JSON: {exc}"})
-                    # Strip the malformed tail anyway so it cannot leak into the EPUB.
-                    cleaned = content[: m.start()].rstrip() + "\n"
-                    with open(fpath, "w", encoding="utf-8") as fh:
-                        fh.write(cleaned)
-                    cleaned_files.append(rel)
-                    continue
                 chapter_terms = []
-                for t in terms:
-                    if isinstance(t, dict) and str(t.get("original") or "").strip():
-                        chapter_terms.append({
-                            "original": str(t["original"]).strip(),
-                            "rus": str(t.get("rus") or "").strip(),
-                            "note": str(t.get("note") or "").strip(),
-                        })
-                if chapter_terms:
-                    harvested[rel] = chapter_terms
-                cleaned = content[: m.start()].rstrip() + "\n"
+                bad = False
+                for m in matches:
+                    try:
+                        terms = json.loads(m.group(1))
+                        if not isinstance(terms, list):
+                            raise ValueError("not a JSON array")
+                    except (ValueError, json.JSONDecodeError) as exc:
+                        parse_errors.append({"file": rel, "error": f"bad NEW_TERMS JSON: {exc}"})
+                        bad = True
+                        continue
+                    for t in terms:
+                        if isinstance(t, dict) and str(t.get("original") or "").strip():
+                            chapter_terms.append({
+                                "original": str(t["original"]).strip(),
+                                "rus": str(t.get("rus") or "").strip(),
+                                "note": str(t.get("note") or "").strip(),
+                                "role": "review" if "_reviewed" in fname else "translator",
+                            })
+                # Вырезаем ВСЕ хвосты (включая битые) — иначе они уедут в EPUB.
+                cleaned = content
+                for m in reversed(matches):
+                    cleaned = cleaned[: m.start()] + cleaned[m.end():]
+                cleaned = cleaned.rstrip() + "\n"
                 with open(fpath, "w", encoding="utf-8") as fh:
                     fh.write(cleaned)
                 cleaned_files.append(rel)
+                if bad and not chapter_terms:
+                    continue
+                if chapter_terms:
+                    harvested[rel] = chapter_terms
 
-        # Flatten in stable file order, dropping duplicates by original key.
+        # Flatten in stable file order. Одинаковый original от переводчика и
+        # ревью с РАЗНЫМ rus — не выкидываем молча, а пишем в конфликты:
+        # какой вариант верный, решает человек.
         flat: list[dict] = []
-        seen: set[str] = set()
+        by_key: dict[str, dict] = {}
+        conflicts: list[dict] = []
         for rel in sorted(harvested):
             for t in harvested[rel]:
                 key = t["original"].lower()
-                if key in seen:
-                    continue
-                seen.add(key)
                 t = dict(t)
                 t["source_file"] = rel
-                flat.append(t)
+                if key not in by_key:
+                    by_key[key] = t
+                    flat.append(t)
+                    continue
+                prev = by_key[key]
+                if prev["rus"] == t["rus"]:
+                    continue
+                conflicts.append({
+                    "original": t["original"],
+                    "kept": {"rus": prev["rus"], "role": prev.get("role"), "file": prev["source_file"]},
+                    "dropped": {"rus": t["rus"], "role": t.get("role"), "file": rel},
+                })
 
         # Recurrence gate against the rest of the book (same logic as glossary).
         min_ahead = int(getattr(args, "min_ahead", 0) or 0)
@@ -1914,6 +1938,7 @@ def build_parser() -> argparse.ArgumentParser:
             "cleaned_files": cleaned_files,
             "new_terms": len(flat),
             "terms": flat,
+            "conflicts": conflicts,
             "min_ahead": min_ahead,
             "scanned_ahead": (next(iter(ahead_stats.values()), {})
                               .get("scanned_chapters", 0) if ahead_stats else 0),

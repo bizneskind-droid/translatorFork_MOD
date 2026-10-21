@@ -659,7 +659,17 @@ class UniversalWorker(QObject):
                 if (failure_count // 2) % 2 != 0:
                     use_stream = not default_stream_mode
                 
+                # На попытках 3+ переключаем Gemini agy с high на medium для предотвращения таймаутов
+                if getattr(self, 'api_provider_name', None) == 'agy' and hasattr(self, 'api_handler_instance'):
+                    if not hasattr(self, '_base_model_id'):
+                        self._base_model_id = getattr(self.api_handler_instance, 'model_id', None) or getattr(self, 'model_id', '')
+                    if self._base_model_id and '-high' in self._base_model_id:
+                        self.api_handler_instance.model_id = self._base_model_id.replace('-high', '-medium')
+
                 should_log_strategy = True
+            else:
+                if hasattr(self, '_base_model_id') and hasattr(self, 'api_handler_instance'):
+                    self.api_handler_instance.model_id = self._base_model_id
             
             # Если failure_count == 1 (вторая попытка), мы сюда не заходим,
             # use_stream остается default (STREAM), и лог стратегии не пишется (как и должно быть).
@@ -676,10 +686,12 @@ class UniversalWorker(QObject):
         
         if should_log_strategy:
             mode_text = "STREAM" if use_stream else "SINGLE"
+            active_model = getattr(getattr(self, 'api_handler_instance', None), 'model_id', None) or getattr(self, 'model_id', None)
+            model_suffix = f", модель: {active_model}" if active_model else ""
             # failure_count - это количество уже произошедших ошибок.
             # Значит, текущая попытка - это failure_count + 1.
             self._post_event('log_message', {
-                'message': f"⚙️ [STRATEGY] Задача '{task_name}': Попытка #{failure_count + 1}. Выбран режим API: {mode_text}"
+                'message': f"⚙️ [STRATEGY] Задача '{task_name}': Попытка #{failure_count + 1}. Выбран режим API: {mode_text}{model_suffix}"
             })
         
         # --- Делегирование выполнения стратегии ---

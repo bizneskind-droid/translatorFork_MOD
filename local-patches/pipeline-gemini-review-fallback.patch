@@ -1,0 +1,413 @@
+diff --git a/gemini_translator/cli.py b/gemini_translator/cli.py
+index 90d281c..feff009 100644
+--- a/gemini_translator/cli.py
++++ b/gemini_translator/cli.py
+@@ -1377,6 +1377,374 @@ def _add_common_run_args(parser: argparse.ArgumentParser) -> None:
+     parser.add_argument("--settings-json", help="JSON file with final settings overrides.")
+ 
+ 
++def command_pipeline(args) -> dict:
++    """Run automated end-to-end chapter pipeline (translate -> review -> polish -> verify -> insert/publish)."""
++    import glob
++    import subprocess
++
++    epub_path = _abs_path(args.epub)
++    project_folder = _abs_path(args.project)
++
++    raw_chapter = None
++    if getattr(args, "chapter", None):
++        raw_chapter = args.chapter[0] if isinstance(args.chapter, list) else str(args.chapter)
++    if not raw_chapter:
++        raise CliError("Chapter must be specified via --chapter (e.g. 196 or chapter_00196.xhtml).")
++
++    m = re.search(r"(\d+)", os.path.basename(raw_chapter))
++    if not m:
++        raise CliError(f"Cannot extract chapter number from '{raw_chapter}'.")
++    ch_num = int(m.group(1))
++    ch_file = f"chapter_{ch_num:05d}.xhtml"
++    ch_stem = f"chapter_{ch_num:05d}"
++
++    stages_dir = f"/tmp/hr{ch_num}-stages"
++    os.makedirs(stages_dir, exist_ok=True)
++
++    cli_script = os.path.abspath(sys.argv[0])
++
++    provider = getattr(args, "provider", None) or "agy"
++    model = getattr(args, "model", None) or ("Gemini 3.8 Flash (High)" if provider == "agy" else "DeepSeek V4 Flash (AR)")
++    retry_model = getattr(args, "retry_model", None) or ("Gemini 3.8 Flash (Medium)" if provider == "agy" and "High" in str(model) else None)
++    fallback_p = getattr(args, "fallback_provider", None) or "agentrouter"
++    fallback_m = getattr(args, "fallback_model", None) or "DeepSeek V4 Flash (AR)"
++    rev_provider = getattr(args, "review_provider", None) or provider
++    rev_model = getattr(args, "review_model", None) or ("Gemini 3.8 Flash (Medium)" if rev_provider == "agy" else (model if rev_provider == provider else "DeepSeek V4 Flash (AR)"))
++    glossary = getattr(args, "glossary", None) or "/home/almaz/projects/hundred-reigns/glossary/glossary.json"
++    prompt_file = getattr(args, "prompt_file", None) or "config/hundred_reigns_prompt.txt"
++    rev_prompt_file = getattr(args, "review_prompt_file", None) or "config/hundred_reigns_review_prompt.txt"
++    pol_prompt_file = getattr(args, "polish_prompt_file", None) or "config/hundred_reigns_polish_prompt.txt"
++    realign_prompt_file = getattr(args, "realign_prompt_file", None) or "config/hundred_reigns_realign_prompt.txt"
++    timeout_sec = getattr(args, "timeout", None) or 600
++    retries = getattr(args, "retries", None) or 2
++
++    print("=" * 50)
++    print(f"СТАРТ КОНВЕЙЕРА: Глава {ch_num} ({provider} / {model})")
++    print(f"Время: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
++    print("=" * 50)
++
++    # 1. TRANSLATE
++    print(f"=== [1/3] TRANSLATE ({datetime.datetime.now().strftime('%H:%M:%S')}) ===")
++    src_html = None
++    candidate_patterns = [
++        os.path.join(project_folder, "EPUB", f"{ch_stem}_translated_*.html"),
++        os.path.join(f"/tmp/hr{ch_num}", "EPUB", f"{ch_stem}_translated_*.html"),
++        os.path.join(f"/tmp/hr{ch_num}_agy", "EPUB", f"{ch_stem}_translated_*.html"),
++        os.path.join(f"/tmp/hr{ch_num}_ar", "EPUB", f"{ch_stem}_translated_*.html"),
++    ]
++    for pat in candidate_patterns:
++        for f in glob.glob(pat):
++            if os.path.isfile(f) and os.path.getsize(f) > 0:
++                src_html = f
++                print(f"  Найден существующий перевод: {src_html}")
++                break
++        if src_html:
++            break
++
++    def run_sub_cmd(cmd_list, log_path=None):
++        print(f"  [RUN] {' '.join(cmd_list[:6])}...")
++        log_fh = open(log_path, "w", encoding="utf-8") if log_path else None
++        try:
++            proc = subprocess.Popen(
++                cmd_list,
++                stdout=subprocess.PIPE,
++                stderr=subprocess.STDOUT,
++                text=True,
++                encoding="utf-8",
++                errors="replace",
++            )
++            out_lines = []
++            for line in proc.stdout:
++                if log_fh:
++                    log_fh.write(line)
++                    log_fh.flush()
++                out_lines.append(line)
++                if any(k in line for k in ("TASK", "STRATEGY", "AGY", "ERROR", "ОШИБКА", "FAIL", "completed", "Карточка", "Зарегистрирована")):
++                    print(f"  {line.strip()}")
++            proc.wait()
++            return proc.returncode, "".join(out_lines)
++        finally:
++            if log_fh:
++                log_fh.close()
++
++    if not src_html:
++        os.makedirs(project_folder, exist_ok=True)
++        primary_ok = False
++        trans_log = f"/tmp/hr{ch_num}-translate.log"
++
++        for attempt in range(1, retries + 1):
++            cur_model = retry_model if (attempt > 1 and retry_model) else model
++            cur_plan_cmd = [
++                sys.executable, cli_script, "--compact", "plan",
++                "--epub", epub_path, "--project", project_folder,
++                "--chapter", ch_file, "--provider", provider,
++                "--model", cur_model, "--api-key", "DUMMY",
++                "--glossary", glossary, "--prompt-file", prompt_file,
++                "--mode", "batch", "--task-size", "13000"
++            ]
++            cur_trans_cmd = [
++                sys.executable, cli_script, "--compact", "translate",
++                "--epub", epub_path, "--project", project_folder,
++                "--chapter", ch_file, "--provider", provider,
++                "--model", cur_model, "--api-key", "DUMMY",
++                "--glossary", glossary, "--prompt-file", prompt_file,
++                "--mode", "batch", "--task-size", "13000",
++                "--timeout", str(timeout_sec), "--verbose"
++            ]
++            if attempt > 1:
++                print(f"  [translate] Повторная попытка {attempt}/{retries} ({provider} / {cur_model})...")
++                shutil.rmtree(project_folder, ignore_errors=True)
++                os.makedirs(project_folder, exist_ok=True)
++                rc_plan, out_plan = run_sub_cmd(cur_plan_cmd, f"/tmp/hr{ch_num}-plan.log")
++                if rc_plan != 0:
++                    print(f"  [ОШИБКА] Этап PLAN упал: {out_plan[-300:]}")
++                    continue
++            else:
++                print("  Планирование (plan)...")
++                rc_plan, out_plan = run_sub_cmd(cur_plan_cmd, f"/tmp/hr{ch_num}-plan.log")
++                if rc_plan != 0:
++                    print(f"  [ОШИБКА] Этап PLAN упал: {out_plan[-300:]}")
++                    raise CliError(f"PLAN failed: {out_plan[-300:]}")
++                print("  Перевод (translate)...")
++                print(f"  [translate] Попытка 1/{retries} ({provider} / {cur_model})...")
++
++            rc, out = run_sub_cmd(cur_trans_cmd, trans_log)
++            has_primary_output = any(
++                os.path.isfile(f) and os.path.getsize(f) > 0
++                for f in glob.glob(os.path.join(project_folder, "EPUB", f"{ch_stem}_translated_*.html"))
++            )
++            is_safety = any(k in out.lower() for k in (
++                "contentfiltererror", "safety", "content policy", "filter", "blocked", "0 tokens", "пустой ответ",
++                "фильтр", "блокировк", "политик", "безопасност", "заблокирован"
++            ))
++            if rc == 0 and not is_safety and has_primary_output:
++                primary_ok = True
++                break
++            print(f"  [translate] Сбой попытки {attempt} (safety={is_safety}, rc={rc}, output={has_primary_output})")
++            if is_safety:
++                print(f"  [translate] Обнаружена блокировка safety policy, повтор {provider} пропущен.")
++                break
++            time.sleep(3)
++
++        if not primary_ok:
++            print(f"  [FALLBACK] Сбой всех попыток {provider}. Переключаемся на {fallback_p} ({fallback_m})...")
++            shutil.rmtree(project_folder, ignore_errors=True)
++            os.makedirs(project_folder, exist_ok=True)
++
++            fb_plan_cmd = [
++                sys.executable, cli_script, "--compact", "plan",
++                "--epub", epub_path, "--project", project_folder,
++                "--chapter", ch_file, "--provider", fallback_p,
++                "--model", fallback_m, "--api-key", "DUMMY",
++                "--glossary", glossary, "--prompt-file", prompt_file,
++                "--mode", "batch", "--task-size", "13000"
++            ]
++            run_sub_cmd(fb_plan_cmd, f"/tmp/hr{ch_num}-plan-fb.log")
++
++            fb_trans_cmd = [
++                sys.executable, cli_script, "--compact", "translate",
++                "--epub", epub_path, "--project", project_folder,
++                "--chapter", ch_file, "--provider", fallback_p,
++                "--model", fallback_m, "--api-key", "DUMMY",
++                "--glossary", glossary, "--prompt-file", prompt_file,
++                "--mode", "batch", "--task-size", "13000",
++                "--timeout", str(timeout_sec), "--verbose"
++            ]
++            rc, out = run_sub_cmd(fb_trans_cmd, trans_log)
++            if rc != 0:
++                raise CliError(f"Fallback translation via {fallback_p} failed: {out[-300:]}")
++
++        for f in glob.glob(os.path.join(project_folder, "EPUB", f"{ch_stem}_translated_*.html")):
++            if os.path.isfile(f) and os.path.getsize(f) > 0:
++                src_html = f
++                break
++        if not src_html:
++            raise CliError(f"Translation completed but output file not found in {project_folder}/EPUB/.")
++        print(f"  OK: Перевод завершён -> {src_html}")
++
++    # Сбор и добавление новых терминов (harvest-terms)
++    if glossary and os.path.isfile(glossary):
++        print(f"\n=== СБОР НОВЫХ ТЕРМИНОВ ({datetime.datetime.now().strftime('%H:%M:%S')}) ===")
++        harvest_cmd = [
++            sys.executable, cli_script, "--compact", "harvest-terms",
++            "--project", project_folder,
++            "--epub", epub_path,
++            "--export-to", glossary,
++            "--min-ahead", "0",
++        ]
++        rc, h_out = run_sub_cmd(harvest_cmd, f"/tmp/hr{ch_num}-harvest.log")
++        if rc == 0:
++            try:
++                m_json = re.search(r'(\{[\s\S]*"ok":\s*true[\s\S]*\})', h_out)
++                if m_json:
++                    h_data = json.loads(m_json.group(1))
++                    terms = h_data.get("terms", [])
++                    export = h_data.get("export") or {}
++                    added_count = export.get("added_count", 0)
++                    print(f"  [HARVEST] Предложено терминов: {len(terms)}, добавлено в глоссарий: {added_count}")
++                    for t in terms:
++                        status = "ДОБАВЛЕН" if any(a.get("original") == t.get("original") for a in export.get("added", [])) else "уже был"
++                        print(f"    * {t.get('original')} -> {t.get('rus')} ({t.get('note')}) [{status}]")
++            except Exception as e:
++                print(f"  [HARVEST] Ошибка вывода отчёта: {e}")
++        else:
++            print(f"  [HARVEST] Предупреждение: harvest-terms завершился с кодом {rc}")
++
++    # 2. REVIEW & POLISH
++    print(f"=== [2/3] REVIEW & POLISH ({datetime.datetime.now().strftime('%H:%M:%S')}) ===")
++    rev_prj = os.path.join(stages_dir, "review")
++    rev_epub_dir = os.path.join(rev_prj, "EPUB")
++    os.makedirs(rev_epub_dir, exist_ok=True)
++    rev_in = os.path.join(rev_epub_dir, f"{ch_stem}_translated_ar.html")
++    rev_out = os.path.join(rev_epub_dir, f"{ch_stem}_translated_ar_reviewed.html")
++    shutil.copy2(src_html, rev_in)
++
++    with open(os.path.join(rev_prj, "translation_map.json"), "w", encoding="utf-8") as fh:
++        json.dump({f"EPUB/{ch_file}": {"_translated_ar.html": f"EPUB/{ch_stem}_translated_ar.html"}}, fh, indent=2)
++
++    def execute_stage(name, prj_dir, prompt_p, log_p, apply_flag=False):
++        stage_provider = rev_provider
++        stage_model = rev_model
++        max_stage_attempts = 4 if fallback_p else 3
++        for attempt in range(1, max_stage_attempts + 1):
++            print(f"  [{name}] попытка {attempt}/{max_stage_attempts} ({stage_provider} / {stage_model})...")
++            cmd = [
++                sys.executable, cli_script, "--compact", "review",
++                "--epub", epub_path, "--project", prj_dir,
++                "--chapters", "translated", "--provider", stage_provider,
++                "--model", stage_model, "--api-key", "DUMMY",
++                "--glossary", glossary, "--prompt-file", prompt_p,
++                "--timeout", str(timeout_sec)
++            ]
++            if apply_flag:
++                cmd.append("--apply")
++            rc, out = run_sub_cmd(cmd, log_p)
++            expected_out = os.path.join(prj_dir, "EPUB", f"{ch_stem}_translated_ar.html" if apply_flag else f"{ch_stem}_translated_ar_reviewed.html")
++            if os.path.isfile(expected_out) and os.path.getsize(expected_out) > 0 and '"ok": true' in out:
++                print(f"  [{name}] успешно -> {expected_out}")
++                return expected_out
++            if stage_provider != fallback_p:
++                is_safety = any(k in out.lower() for k in (
++                    "contentfiltererror", "safety", "content policy", "filter", "blocked", "0 tokens", "пустой ответ"
++                ))
++                if is_safety or attempt >= 2:
++                    reason = "safety filter" if is_safety else "исчерпаны попытки Gemini"
++                    print(f"  [{name}] сбой {stage_provider} ({reason}), переключаемся на fallback {fallback_p} ({fallback_m})...")
++                    stage_provider = fallback_p
++                    stage_model = fallback_m
++                else:
++                    print(f"  [{name}] сетевой сбой {stage_provider}, повторная попытка...")
++            time.sleep(3)
++        raise CliError(f"Стадия {name} не удалась после {max_stage_attempts} попыток.")
++
++    if os.path.isfile(rev_out) and os.path.getsize(rev_out) > 0:
++        print(f"  пропуск: {rev_out} уже существует")
++    else:
++        execute_stage("review", rev_prj, rev_prompt_file, f"/tmp/hr{ch_num}-review.log")
++
++    pol_prj = os.path.join(stages_dir, "polish")
++    pol_epub_dir = os.path.join(pol_prj, "EPUB")
++    os.makedirs(pol_epub_dir, exist_ok=True)
++    pol_in = os.path.join(pol_epub_dir, f"{ch_stem}_translated_ar.html")
++    pol_out = pol_in
++
++    if os.path.isfile(pol_out) and os.path.getsize(pol_out) > 0 and os.path.exists(os.path.join(pol_prj, "prereview_backups")):
++        print(f"  пропуск: {pol_out} уже отполирован")
++    else:
++        with open(os.path.join(pol_prj, "translation_map.json"), "w", encoding="utf-8") as fh:
++            json.dump({f"EPUB/{ch_file}": {"_translated_ar.html": f"EPUB/{ch_stem}_translated_ar.html"}}, fh, indent=2)
++        shutil.copy2(rev_out, pol_in)
++        execute_stage("polish", pol_prj, pol_prompt_file, f"/tmp/hr{ch_num}-polish.log", apply_flag=True)
++
++    # 3. VERIFY PARAGRAPHS
++    print(f"=== [3/3] СВЕРКА АБЗАЦЕВ ({datetime.datetime.now().strftime('%H:%M:%S')}) ===")
++    with zipfile.ZipFile(epub_path) as z:
++        src_raw = z.read(f"EPUB/{ch_file}").decode("utf-8")
++    src_p = len([p.strip() for p in re.findall(r"<p[ >](.*?)</p>", src_raw, flags=re.S) if p.strip()])
++
++    raw = Path(pol_out).read_text(encoding="utf-8")
++    idx = raw.find("<body")
++    body = raw[idx:] if idx != -1 else raw
++    body = re.sub(r"\s*<!--\s*NEW_TERMS.*?-->\s*$", "", body, flags=re.S)
++    paras = re.findall(r"<p>(.*?)</p>", body, flags=re.S)
++    paras = [p.strip() for p in paras if p.strip()]
++    if paras and re.match(r"^Глава\s+\d+:", paras[0]):
++        paras = paras[1:]
++    ru_p = len(paras)
++    matched = (src_p == ru_p)
++    diff = ru_p - src_p
++
++    print("=" * 50)
++    print(f"ИТОГОВАЯ СВЕРКА АБЗАЦЕВ (Глава {ch_num}):")
++    print(f"  Оригинал (EN): {src_p}")
++    print(f"  Полиш    (RU): {ru_p}")
++    if matched:
++        print(f"  Результат:    СОВПАДАЮТ ({ru_p}/{src_p}) [OK]")
++    else:
++        print(f"  Результат:    НЕ СОВПАДАЮТ (разница: {diff:+d}) [ВНИМАНИЕ]")
++        print(f"  [REALIGN] Запуск этапа ИИ для выравнивания структуры (разница: {diff:+d})...")
++        realign_prj = os.path.join(stages_dir, "realign")
++        realign_epub_dir = os.path.join(realign_prj, "EPUB")
++        os.makedirs(realign_epub_dir, exist_ok=True)
++        realign_in = os.path.join(realign_epub_dir, f"{ch_stem}_translated_ar.html")
++        realign_out = os.path.join(realign_epub_dir, f"{ch_stem}_translated_ar.html")
++        shutil.copy2(pol_out, realign_in)
++        with open(os.path.join(realign_prj, "translation_map.json"), "w", encoding="utf-8") as fh:
++            json.dump({f"EPUB/{ch_file}": {"_translated_ar.html": f"EPUB/{ch_stem}_translated_ar.html"}}, fh, indent=2)
++        try:
++            execute_stage("realign", realign_prj, realign_prompt_file, f"/tmp/hr{ch_num}-realign.log", apply_flag=True)
++            if os.path.isfile(realign_out) and os.path.getsize(realign_out) > 0:
++                raw_realign = Path(realign_out).read_text(encoding="utf-8")
++                idx_r = raw_realign.find("<body")
++                body_r = raw_realign[idx_r:] if idx_r != -1 else raw_realign
++                new_ru_p = len(re.findall(r"<p[ >]", body_r))
++                print(f"  [REALIGN] Результат выравнивания: {new_ru_p} <p> (цель: {src_p})")
++                if new_ru_p == src_p:
++                    print("  [REALIGN] Успешно! Структура выровнена 1:1.")
++                    shutil.copy2(realign_out, pol_out)
++                    ru_p = new_ru_p
++                    diff = 0
++                    matched = True
++                else:
++                    print(f"  [REALIGN] Модель не свела разницу (осталось {abs(new_ru_p - src_p)}).")
++        except Exception as e:
++            print(f"  [REALIGN] Ошибка этапа выравнивания: {e}")
++    print("=" * 50)
++    print(f"Готовый файл: {pol_out}")
++
++    insert_res = None
++    if getattr(args, "insert_epub", False):
++        print(f"Вшивание главы {ch_num} в RU EPUB...")
++        ins_cmd = [
++            sys.executable, "/home/almaz/projects/hundred-reigns/insert_chapter.py",
++            "--number", str(ch_num),
++            "--input", pol_out,
++            "--source-epub", epub_path
++        ]
++        rc, out = run_sub_cmd(ins_cmd)
++        insert_res = {"ok": rc == 0, "output": out}
++
++    publish_res = None
++    if getattr(args, "publish", False):
++        print(f"Публикация в WebDAV...")
++        pub_cmd = ["sudo", sys.executable, "/home/almaz/projects/hundred-reigns/publish_epub.py"]
++        rc, out = run_sub_cmd(pub_cmd)
++        publish_res = {"ok": rc == 0, "output": out}
++
++    return {
++        "ok": matched,
++        "chapter": ch_num,
++        "chapter_file": ch_file,
++        "polished_file": pol_out,
++        "paragraphs_match": matched,
++        "src_paragraphs": src_p,
++        "ru_paragraphs": ru_p,
++        "diff": diff,
++        "insert_result": insert_res,
++        "publish_result": publish_res
++    }
++
++
+ def build_parser() -> argparse.ArgumentParser:
+     parser = argparse.ArgumentParser(
+         prog="translator-cli",
+@@ -1444,7 +1812,7 @@ def build_parser() -> argparse.ArgumentParser:
+             raise CliError(f"Project folder not found: {project_folder}")
+ 
+         tail_re = re.compile(
+-            r"<!--NEW_TERMS\s*(\[.*?\])\s*-->\s*$", re.DOTALL
++            r"<!--\s*NEW_TERMS\s*(\[.*?\])\s*-->\s*$", re.DOTALL
+         )
+         scan_root = project_folder
+         harvested: dict[str, list] = {}
+@@ -1570,6 +1938,24 @@ def build_parser() -> argparse.ArgumentParser:
+     build_epub.add_argument("--strict", action="store_true", help="Fail if any selected source chapter has no translation.")
+     build_epub.set_defaults(func=command_build_epub)
+ 
++    pipeline = subparsers.add_parser("pipeline", help="Run automated end-to-end chapter pipeline (translate -> review -> polish -> verify).")
++    _add_common_project_args(pipeline)
++    _add_common_run_args(pipeline)
++    pipeline.add_argument("--fallback-provider", default="agentrouter", help="Fallback provider when primary fails.")
++    pipeline.add_argument("--fallback-model", default="DeepSeek V4 Flash (AR)", help="Fallback model.")
++    pipeline.add_argument("--retry-model", default=None, help="Model for retry attempts before fallback (e.g. Gemini 3.8 Flash (Medium)).")
++    pipeline.add_argument("--review-provider", default=None, help="Provider for review/polish (defaults to primary provider).")
++    pipeline.add_argument("--review-model", default=None, help="Model for review/polish (defaults to primary model).")
++    pipeline.add_argument("--review-prompt-file", default="config/hundred_reigns_review_prompt.txt", help="Review prompt file.")
++    pipeline.add_argument("--polish-prompt-file", default="config/hundred_reigns_polish_prompt.txt", help="Polish prompt file.")
++    pipeline.add_argument("--realign-prompt-file", default="config/hundred_reigns_realign_prompt.txt", help="Realign prompt file.")
++    pipeline.add_argument('--retries', type=int, default=2, help='Max attempts for primary provider before fallback (default: 2)')
++    pipeline.add_argument('--insert-epub', action='store_true', help='Insert finished chapter into RU EPUB')
++    pipeline.add_argument('--publish', action='store_true', help='Publish RU EPUB to WebDAV')
++    pipeline.add_argument("--timeout", type=int, default=600, help="Stage timeout in seconds.")
++    pipeline.add_argument("--verbose", action="store_true", help="Verbose logging.")
++    pipeline.set_defaults(func=command_pipeline)
++
+     return parser
+ 
+ 

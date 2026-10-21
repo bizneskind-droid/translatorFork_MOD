@@ -1,0 +1,48 @@
+From 23f76a965cf81f8490982d2be59955d33dce7e00 Mon Sep 17 00:00:00 2001
+From: bizneskind-droid <bizneskind@gmail.com>
+Date: Sun, 27 Sep 2026 13:06:34 +0200
+Subject: [PATCH] review/polish stage: disable DS4F reasoning via
+ thinking:{type:disabled}
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+reasoning_effort:none alone did not stop DS4F reasoning on the agentrouter
+proxy — measured on the ch137 polish prompt it burned 74k reasoning chars and
+returned empty content (finish_reason=max_tokens) in 91s, forcing the empty-reply
+retry loop that made review/polish flaky and slow. Adding the same
+thinking:{type:disabled} switch the translate DeepSeek handler uses truly
+disables it: identical call answered in 22s, reasoning_chars=0, full content.
+---
+ gemini_translator/review.py | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/gemini_translator/review.py b/gemini_translator/review.py
+index 9d5a7dc..ec0d8e7 100644
+--- a/gemini_translator/review.py
++++ b/gemini_translator/review.py
+@@ -292,6 +292,13 @@ def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
+     # empty content field. Review calls go through this raw path (not the
+     # agentrouter handler), so the effort cap must be set here as well.
+     # The budget must also cover both reasoning AND content.
++    #
++    # 2026-09-26: `reasoning_effort: none` alone does NOT stop DS4F reasoning on
++    # this proxy — measured on the ch137 polish prompt it still burned 74k
++    # reasoning chars and returned empty content (finish_reason=max_tokens) in
++    # 91s. Adding `thinking: {"type": "disabled"}` (the same switch the DeepSeek
++    # translate handler uses) truly disables it: the identical call answered in
++    # 22s with reasoning_chars=0 and full content. Both flags are set.
+     reasoning_off = "deepseek" in str(model_id).lower()
+     payload = {
+         "model": model_id,
+@@ -300,6 +307,7 @@ def call_model(endpoint: str, headers: dict, model_id: str, prompt: str,
+     }
+     if reasoning_off:
+         payload["reasoning_effort"] = "none"
++        payload["thinking"] = {"type": "disabled"}
+ 
+     req = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"),
+                                  headers=headers)
+-- 
+2.34.1
+

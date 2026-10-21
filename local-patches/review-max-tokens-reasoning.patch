@@ -1,0 +1,38 @@
+--- gemini_translator/review.py.bak-pre-reasoning-budget	2026-09-19 06:02:59.191660684 +0200
++++ gemini_translator/review.py	2026-09-19 15:49:52.853062487 +0200
+@@ -178,7 +178,18 @@
+     choices = payload.get("choices") or []
+     if not choices:
+         raise RuntimeError(f"пустой ответ: {json.dumps(payload)[:300]}")
+-    return (choices[0].get("message") or {}).get("content") or ""
++    choice = choices[0]
++    content = (choice.get("message") or {}).get("content") or ""
++    if not content:
++        # DS4F drift (2026-09-19): reasoning is emitted even with
++        # reasoning_effort=none and consumes the whole max_tokens budget, so
++        # content comes back empty with finish_reason=max_tokens. Report that
++        # plainly instead of letting it surface as a nameless empty_reply.
++        reasoning = (choice.get("message") or {}).get("reasoning_content") or ""
++        raise RuntimeError(
++            "пустой content (finish_reason=%s, reasoning_chars=%d, max_tokens=%s)"
++            % (choice.get("finish_reason"), len(reasoning), max_tokens))
++    return content
+ 
+ 
+ # --------------------------------------------------------------- reply cleaning
+@@ -248,7 +259,14 @@
+ 
+     # Output must fit the whole chapter HTML with headroom; a tight cap
+     # truncates the reply and the paragraph guard then rejects a valid review.
+-    budget = max(8000, int(len(translated_html) / 2))
++    # DS4F (2026-09-19) emits 70k+ chars of reasoning per full chapter even with
++    # reasoning_effort=none, i.e. ~20-25k tokens BEFORE any content: at the old
++    # cap (len/2 ≈ 23k) the model returns empty content with
++    # finish_reason=max_tokens. So the cap must cover reasoning + content.
++    # Gl.79 (2026-09-19): polish burned 98k reasoning chars (~30k tokens) on a
++    # 34k-char chapter and still hit the 32k cap -> budget raised to 64k (the
++    # model's max_output_tokens) instead of len(html).
++    budget = max(64000, len(translated_html))
+ 
+     try:
+         reply = call_model(endpoint, headers, model_id, prompt, budget, timeout)

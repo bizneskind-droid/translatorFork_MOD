@@ -873,7 +873,7 @@
   "agentrouter": {
     "display_name": "AgentRouter (Claude)",
     "handler_class": "AgentRouterApiHandler",
-    "base_url": "http://127.0.0.1:3001/v1/chat/completions",
+    "base_url": "http://127.0.0.1:3000/v1/chat/completions",
     "is_async": true,
     "needs_warmup": false,
     "visible": true,
@@ -949,6 +949,15 @@
       },
       "Kimi K3 (AR)": {
         "id": "kimi-k3",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 3,
+        "max_output_tokens": 30000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "GPT 6.1 Sol (AR)": {
+        "id": "gpt-6.1-sol",
         "rpm": 10,
         "needs_chunking": true,
         "max_concurrent_requests": 3,
@@ -1321,6 +1330,175 @@
         "max_concurrent_requests": 2,
         "max_output_tokens": 32000,
         "context_length": 1000000,
+        "min_thinking_budget": false
+      }
+    }
+  },
+  "agentrouter-gpt61": {
+    "display_name": "AgentRouter GPT 6.1 (Anthropic)",
+    "provider": "agentrouter-gpt61",
+    "handler_class": "HermesApiHandler",
+    "base_url": "http://127.0.0.1:3001/v1/messages",
+    "base_timeout": 1200,
+    "is_async": true,
+    "needs_warmup": false,
+    "visible": true,
+    "file_suffix": "_translated_hm.html",
+    "shared_request_counter": false,
+    "models": {
+      "GPT 6.1 Sol (Anthropic)": {
+        "id": "gpt-6.1-sol",
+        "rpm": 10,
+        "needs_chunking": true,
+        "max_concurrent_requests": 2,
+        "max_output_tokens": 30000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      }
+    }
+  },
+  "agy": {
+    "display_name": "Antigravity (agy CLI)",
+    "handler_class": "AgyApiHandler",
+    "binary": "",
+    "timeout_seconds": 600,
+    "base_timeout": 600,
+    "is_async": true,
+    "needs_warmup": false,
+    "visible": true,
+    "requires_api_key": false,
+    "placeholder_api_key": "__antigravity_agy_session__",
+    "file_suffix": "_translated_agy.html",
+    "shared_request_counter": false,
+    "reset_policy": {
+      "type": "rolling",
+      "duration_hours": 24
+    },
+    "models": {
+      "Gemini 3.8 Flash (High)": {
+        "id": "gemini-3.8-flash-high",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.8 Flash (Medium)": {
+        "id": "gemini-3.8-flash-medium",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.8 Flash (Low)": {
+        "id": "gemini-3.8-flash-low",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.7 Flash (High)": {
+        "id": "gemini-3.7-flash-high",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.7 Flash (Medium)": {
+        "id": "gemini-3.7-flash-medium",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.7 Flash (Low)": {
+        "id": "gemini-3.7-flash-low",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.6 Flash (High)": {
+        "id": "gemini-3.6-flash-high",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.6 Flash (Medium)": {
+        "id": "gemini-3.6-flash-medium",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.6 Flash (Low)": {
+        "id": "gemini-3.6-flash-low",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.1 Pro (High)": {
+        "id": "gemini-3.1-pro-high",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Gemini 3.1 Pro (Low)": {
+        "id": "gemini-3.1-pro-low",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Claude Opus 4.6 (Thinking)": {
+        "id": "claude-opus-4-6-thinking",
+        "rpm": 3,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "Claude Sonnet 4.6": {
+        "id": "claude-sonnet-4-6",
+        "rpm": 5,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 200000,
+        "min_thinking_budget": false
+      },
+      "GPT-OSS 120B (Medium)": {
+        "id": "gpt-oss-120b-medium",
+        "rpm": 8,
+        "needs_chunking": true,
+        "max_concurrent_requests": 1,
+        "max_output_tokens": 32000,
+        "context_length": 128000,
         "min_thinking_budget": false
       }
     }

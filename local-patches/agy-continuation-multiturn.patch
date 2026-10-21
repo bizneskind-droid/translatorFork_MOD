@@ -1,0 +1,45 @@
+--- gemini_translator/api/handlers/agy.py.bak	2026-10-04 15:53:13.053516596 +0200
++++ gemini_translator/api/handlers/agy.py	2026-10-04 15:54:52.226874533 +0200
+@@ -305,7 +305,7 @@
+                 if step_type == "agent_response":
+                     if step.get("text_delta"):
+                         collected_text += step["text_delta"]
+-                elif step_type and step_type != "user_input":
++                elif step_type and step_type not in ("user_input", "error_message", "system_message"):
+                     # Любой другой шаг = модель пошла работать агентом, а не
+                     # переводить. Главу принимать нельзя.
+                     foreign_steps.append((step_type, step.get("state")))
+@@ -328,9 +328,14 @@
+                 f"{stdout_text[-300:]!r}"
+             )
+ 
++        text = collected_text if len(collected_text.strip()) >= len((final_result or "").strip()) else (final_result or "")
++
+         status = str(result_event.get("status") or "").upper()
+         if status and status != "SUCCESS":
+-            self._raise_for_result_error(result_event)
++            # Если agy вернул статус ошибки из-за отсечки токенов, но модель успешно продолжила
++            # генерацию и отдала валидный HTML с абзацами — принимаем результат
++            if not (re.search(r"<p\b", text, re.I) and not foreign_steps):
++                self._raise_for_result_error(result_event)
+ 
+         if foreign_steps:
+             raise ValidationFailedError(
+@@ -338,8 +343,6 @@
+                 + ", ".join(t for t, _ in foreign_steps[:5])
+                 + "). Глава не принята."
+             )
+-
+-        text = final_result or collected_text
+         if not text.strip():
+             raise ValidationFailedError(
+                 "agy вернул пустой ответ (result.response пуст). "
+@@ -403,7 +406,7 @@
+             raise RateLimitExceededError(
+                 f"Лимит/квота Antigravity исчерпаны: {blob[:300]}"
+             )
+-        if any(k in blob for k in ("authenticat", "unauthor", "login", "token")):
++        if any(k in blob for k in ("authenticat", "unauthor", "login", "invalid_token")):
+             raise RateLimitExceededError(
+                 f"Antigravity CLI не авторизован: {blob[:300]}"
+             )

@@ -189,10 +189,35 @@ class EpubSingleFileProcessor(BaseTaskProcessor):
         if not getattr(self.worker, "force_accept", False):
             is_valid, reason, validated_html = validate_html_structure(original_body_with_placeholders, cleaned_response)
             if not is_valid:
-                self._raise_validation_error(
-                    f"Ответ не прошел валидацию: {reason}",
-                    raw_response or cleaned_response
+                from gemini_translator.utils.realign import try_realign_translated_html
+                self.logger.warning(f"🔄 [REALIGN] Попытка выравнивания структуры через модель ({reason}).")
+                realigned = try_realign_translated_html(
+                    original_body_with_placeholders, cleaned_response, worker=self.worker
                 )
+                if realigned:
+                    is_valid_re, reason_re, val_re = validate_html_structure(
+                        original_body_with_placeholders, realigned
+                    )
+                    if is_valid_re:
+                        self.logger.info("✅ [REALIGN] Структура успешно выровнена моделью.")
+                        is_valid = True
+                        validated_html = val_re
+                    else:
+                        self.logger.warning(f"[REALIGN] Результат Re-align не прошел валидацию: {reason_re}")
+                        validated_html = val_re
+            if not is_valid:
+                orig_len = len(original_body_with_placeholders)
+                trans_len = len(validated_html or cleaned_response)
+                is_substantial = trans_len > 200 and (orig_len == 0 or trans_len >= orig_len * 0.35)
+                if is_substantial:
+                    self.logger.warning(
+                        f"⚠️ [WORKER] Несоответствие структуры ({reason}), но перевод сохранён ({trans_len} символов) для последующего Re-align в конвейере."
+                    )
+                else:
+                    self._raise_validation_error(
+                        f"Ответ не прошел валидацию: {reason}",
+                        raw_response or cleaned_response
+                    )
             cleaned_response = validated_html
 
         restored_body = self.worker.response_parser._restore_media_from_placeholders(
