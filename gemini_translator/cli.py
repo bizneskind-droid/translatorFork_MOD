@@ -1927,7 +1927,7 @@ def build_parser() -> argparse.ArgumentParser:
     harvest.add_argument("--epub", required=True, help="Source EPUB, used for the recurrence gate (chapters after the harvested ones).")
     harvest.add_argument("--project", required=True)
     harvest.add_argument("--export-to", help="Authoritative glossary JSON to supplement with accepted terms (timestamped .bak first). Without this flag the harvest is report-only.")
-    harvest.add_argument("--min-ahead", type=int, default=0, help="Recurrence gate: keep a new term only if it occurs at least N times in the chapters AFTER the harvested ones. 0 disables the gate.")
+    harvest.add_argument("--min-ahead", type=int, default=0, help="Recurrence gate: keep a new term only if it occurs at least N times in the chapters AFTER the harvested ones. 0 (default) disables the gate — the book is caught up to the ongoing release, so there is nothing ahead to scan and a term seen once is still a term.")
     harvest.add_argument("--ahead-limit", type=int, default=0, help="Scan at most N following chapters for the recurrence gate; 0 scans to the end of the book.")
     harvest.set_defaults(func=command_harvest_terms)
 
