@@ -71,7 +71,14 @@ Any earlier instruction about raw HTML or chapter boundary markers is overridden
         self.media_map = {}
 
     def _effective_translation_prompt(self):
+        # В sequential-режиме приоритет у пользовательского промпта: файл проекта
+        # (--prompt-file) должен работать и с контекстом предыдущей главы.
+        # Дефолтный sequential-промпт — фолбэк, если custom prompt не задан
+        # или в нём нет плейсхолдера {previous_chapter_reference}.
         if self.sequential_mode:
+            custom = (self.custom_prompt or "").strip()
+            if custom and "{previous_chapter_reference}" in custom:
+                return custom
             return api_config.default_sequential_prompt()
         return self.custom_prompt
 
@@ -115,8 +122,8 @@ Any earlier instruction about raw HTML or chapter boundary markers is overridden
             versions = self.project_manager.get_versions_for_original(previous_chapter_path)
         except Exception:
             versions = {}
-        if not isinstance(versions, dict) or not versions:
-            return ""
+        if not isinstance(versions, dict):
+            versions = {}
 
         rel_path = ""
         if self.provider_file_suffix:
@@ -127,7 +134,8 @@ Any earlier instruction about raw HTML or chapter boundary markers is overridden
                     rel_path = candidate
                     break
         if not rel_path:
-            return ""
+            # Файла в проекте нет — единственный источник ссылки мастер-EPUB.
+            return self._load_master_epub_reference(previous_chapter_path)
 
         if os.path.isabs(rel_path):
             reference_path = rel_path
@@ -135,11 +143,14 @@ Any earlier instruction about raw HTML or chapter boundary markers is overridden
             project_folder = getattr(self.project_manager, "project_folder", "")
             reference_path = os.path.join(project_folder, rel_path.replace("/", os.sep))
 
-        try:
-            with open(reference_path, "r", encoding="utf-8") as reference_file:
-                reference_text = reference_file.read()
-        except OSError:
-            return ""
+        # Мастер-EPUB главнее проекта: в книге есть правки, которых нет в проекте.
+        reference_text = self._load_master_epub_reference(previous_chapter_path)
+        if not reference_text:
+            try:
+                with open(reference_path, "r", encoding="utf-8") as reference_file:
+                    reference_text = reference_file.read()
+            except OSError:
+                return ""
 
         if self.sequential_reference_char_limit and len(reference_text) > self.sequential_reference_char_limit:
             omitted = len(reference_text) - self.sequential_reference_char_limit
@@ -149,6 +160,70 @@ Any earlier instruction about raw HTML or chapter boundary markers is overridden
             )
 
         return f"Previous translated chapter: {previous_chapter_path}\n\n{reference_text}"
+
+    def _load_master_epub_reference(self, previous_chapter_path):
+        """Ссылка на предыдущую главу из мастер-EPUB (актуальнее правок в проекте).
+
+        env: TRANSLATOR_SEQUENTIAL_MASTER_EPUB=<путь к мастер-EPUB>
+        Внутренний путь главы: TRANSLATOR_SEQUENTIAL_MASTER_PREFIX (по умолчанию EPUB/),
+        при отсутствии файла пробуются map.json проекта и голый номер главы.
+        """
+        master_path = os.environ.get("TRANSLATOR_SEQUENTIAL_MASTER_EPUB", "").strip()
+        if not master_path or not os.path.isfile(master_path):
+            return ""
+        prefix = os.environ.get("TRANSLATOR_SEQUENTIAL_MASTER_PREFIX", "EPUB/")
+        candidates = []
+        name = self._normalize_chapter_path(previous_chapter_path)
+        if name:
+            candidates.append(name)
+            candidates.append(prefix + os.path.basename(name))
+        try:
+            import json as _json
+            project_folder = getattr(self.project_manager, "project_folder", "")
+            map_path = os.path.join(project_folder, "map.json") if project_folder else ""
+            if map_path and os.path.isfile(map_path):
+                with open(map_path, "r", encoding="utf-8") as map_file:
+                    mapping = _json.load(map_file)
+                mapping = mapping.get("files", mapping) if isinstance(mapping, dict) else {}
+                for key in list(mapping.keys()):
+                    if self._normalize_chapter_path(key).endswith(os.path.basename(name)):
+                        candidates.append(key)
+        except Exception:
+            pass
+        try:
+            with zipfile.ZipFile(master_path) as master_zip:
+                names = set(master_zip.namelist())
+                for candidate in candidates:
+                    if candidate in names:
+                        html_text = master_zip.read(candidate).decode("utf-8", errors="ignore")
+                        return self._html_to_reference_text(html_text)
+        except Exception:
+            return ""
+        return ""
+
+    @staticmethod
+    def _html_to_reference_text(html_text):
+        try:
+            soup = BeautifulSoup(html_text, "html.parser")
+            body = soup.body or soup
+            # Заголовки книги дублируются первым <p> (баг сборки EPUB):
+            # их тексты и <title> отбрасываем, чтобы ссылка не начиналась дважды с названия главы.
+            heading_texts = set()
+            for tag in body.find_all(["h1", "h2", "h3", "title"]):
+                value = tag.get_text(" ", strip=True)
+                if value:
+                    heading_texts.add(" ".join(value.split()))
+            lines = []
+            for block in body.find_all(["p", "h1", "h2", "h3", "li"]):
+                text = block.get_text(" ", strip=True)
+                if not text:
+                    continue
+                if block.name == "p" and " ".join(text.split()) in heading_texts:
+                    continue
+                lines.append(text)
+            return "\n\n".join(lines)
+        except Exception:
+            return re.sub(r"<[^>]+>", " ", html_text).strip()
 
     def _build_previous_chapter_reference(self, current_chapters_list=None):
         if not self.sequential_mode:
@@ -372,10 +447,22 @@ Any earlier instruction about raw HTML or chapter boundary markers is overridden
                 full_raw_text_for_glossary_filter += content + "\n"
 
         # --- Этап 1: Фильтруем глоссарий ОДИН РАЗ на основе всего СЫРОГО текста ---
-        glossary_string = self.context_manager.format_glossary_for_prompt(
-            text_content=full_raw_text_for_glossary_filter,
-            current_chapters_list=chapter_list # <--- ПЕРЕДАЕМ
-        )
+        # Sequential-прогон: только точные вхождения в главу. Добор вложенных
+        # подстрок засоряет промпт чужими терминами (~400 из 1009 вместо ~100).
+        saved_threshold = getattr(self.context_manager, "fuzzy_threshold", None)
+        saved_strict = getattr(self.context_manager, "strict_glossary", None)
+        if self.sequential_mode:
+            self.context_manager.strict_glossary = True
+        try:
+            glossary_string = self.context_manager.format_glossary_for_prompt(
+                text_content=full_raw_text_for_glossary_filter,
+                current_chapters_list=chapter_list # <--- ПЕРЕДАЕМ
+            )
+        finally:
+            if self.sequential_mode:
+                if saved_threshold is not None:
+                    self.context_manager.fuzzy_threshold = saved_threshold
+                self.context_manager.strict_glossary = bool(saved_strict)
 
         # --- Этап 2: В цикле СЕГМЕНТИРУЕМ каждую главу отдельно ---
         combined_content_for_ai = []
@@ -469,10 +556,19 @@ Any earlier instruction about raw HTML or chapter boundary markers is overridden
         # который мы передаем в completion_data.
         # В обычном режиме `text_content` и есть оригинал.
         original_text_for_glossary = completion_data['original_content'] if completion_data else text_content
-        glossary_string = self.context_manager.format_glossary_for_prompt(
-            text_content=original_text_for_glossary,
-            current_chapters_list=current_chapters_list # <--- ПЕРЕДАЕМ
-        )
+        # Sequential: глоссарий только по точным вхождениям (без fuzzy/подстрок),
+        # иначе в промпт уходит ~400 чужих терминов вместо ~100 по главе.
+        saved_strict = getattr(self.context_manager, "strict_glossary", None)
+        if self.sequential_mode:
+            self.context_manager.strict_glossary = True
+        try:
+            glossary_string = self.context_manager.format_glossary_for_prompt(
+                text_content=original_text_for_glossary,
+                current_chapters_list=current_chapters_list # <--- ПЕРЕДАЕМ
+            )
+        finally:
+            if self.sequential_mode:
+                self.context_manager.strict_glossary = bool(saved_strict)
         # --- КОНЕЦ НОВОЙ ЛОГИКИ ---
 
         # Готовим основной текст для перевода, как и раньше

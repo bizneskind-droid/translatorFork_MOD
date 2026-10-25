@@ -65,14 +65,16 @@ Preserve tags, comments, attributes, ids, classes, styles, media placeholders, a
 
 If the source is structured JSON, preserve every key and array/object structure exactly and translate only text-bearing values.
 
-## 8. CURRENT SOURCE
+## 7. CURRENT SOURCE
 Translate only this current source fragment:
 
 <source_text>
 {text}
 </source_text>
 
-## 7. НОВЫЕ ТЕРМИНЫ: ХВОСТ `NEW_TERMS`
+---
+
+## 8. НОВЫЕ ТЕРМИНЫ: ХВОСТ `NEW_TERMS`
 
 В конце ответа, сразу после `</html>`, отдельной строкой ставь ровно один HTML-комментарий:
 
@@ -94,6 +96,6 @@ Translate only this current source fragment:
 ## 9. OUTPUT
 Return only the translated current fragment as raw HTML or the required structured transport payload. No markdown fences, no explanations, no reference chapter text.
 
-If section 7 finds new entities, output the `NEW_TERMS` line described there right after `</html>`.
+If section 8 finds new entities, output the `NEW_TERMS` line described in section 8 right after `</html>`.
 
 ---

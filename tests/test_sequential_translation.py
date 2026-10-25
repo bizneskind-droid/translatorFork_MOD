@@ -173,6 +173,39 @@ class SequentialTranslationTests(unittest.TestCase):
         self.assertIn("Готовая первая глава.", user_prompt)
         self.assertIn("<p>Current</p>", user_prompt)
 
+    def test_prompt_builder_prefers_custom_prompt_with_reference_placeholder(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            translated_path = Path(tmp_dir) / "Text" / "ch1_translated.html"
+            translated_path.parent.mkdir(parents=True)
+            translated_path.write_text("<p>Готовая первая глава.</p>", encoding="utf-8")
+
+            builder = PromptBuilder(
+                custom_prompt="PROJECT {previous_chapter_reference}|TEXT={text}",
+                context_manager=None,
+                use_system_instruction=False,
+                sequential_mode=True,
+                project_manager=_FakeProjectManager(tmp_dir),
+                provider_file_suffix="_translated.html",
+                sequential_chapter_order=["Text/ch1.xhtml", "Text/ch2.xhtml"],
+            )
+
+            with patch.object(
+                api_config,
+                "default_sequential_prompt",
+                return_value="DEFAULT {previous_chapter_reference}\nTEXT={text}",
+            ), patch.object(api_config, "internal_prompts", return_value={"translation_output_examples": {}}):
+                user_prompt, _, _ = builder._build_with_placeholders(
+                    "<p>Current</p>",
+                    "",
+                    "",
+                    previous_chapter_reference=builder._build_previous_chapter_reference(["Text/ch2.xhtml"]),
+                )
+
+        self.assertIn("PROJECT", user_prompt)
+        self.assertNotIn("DEFAULT", user_prompt)
+        self.assertIn("Готовая первая глава.", user_prompt)
+        self.assertIn("<p>Current</p>", user_prompt)
+
     def test_prompt_builder_treats_chain_start_as_no_previous_reference(self):
         builder = PromptBuilder(
             custom_prompt="CUSTOM {text}",
