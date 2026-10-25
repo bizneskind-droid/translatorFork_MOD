@@ -21,12 +21,23 @@ Strictly forbidden:
 {previous_chapter_reference}
 </previous_chapter_reference>
 
-## 3. GLOSSARY
-The glossary is the primary authority for fixed terms and gender consistency.
+## 3. GLOSSARY (PRIMARY AUTHORITY)
+The glossary is the binding dictionary for this text. It overrides your own word choice, common usage, and stylistic preference.
 
 <glossary>
 {glossary}
 </glossary>
+
+### 3.1 HOW TO APPLY THE GLOSSARY
+Each entry is `{"s": source, "t": translation, "i": silent context}`.
+
+- **Exact form.** When the source text contains the `s` string, output its `t` string unchanged — same words, same case, same spelling, every time. Do not inflect, re-order, or "improve" a fixed term.
+- **Inflection is allowed, the stem is not.** Case endings may change for grammar (`официальный волшебник` → `официального волшебника`), but the chosen lexical equivalent never changes.
+- **The `i` field is a command, not text.** It carries mandatory instructions: grammatical gender of the keyword, declension (`Скл.` / `Нескл.`), canon spelling, chapter or condition scoping (`cN+`, `до cN`, `если`), homonyms, deliberate gender intrigue, and notes on rejected earlier variants. Follow them silently. Never copy `i` content into the output and never mark a translated term in any way.
+- **Gender and number.** The `i` field fixes the grammatical gender of the keyword itself. Determine the character's actual sex and social role from the scene; when the scene contradicts the tag, the scene wins for pronouns and agreement, but the term's own gender still governs its endings.
+- **Scope wins.** A conditional or chapter-scoped entry applies only where its condition holds; elsewhere the base variant or the general rule applies.
+- **Conflicts.** If two entries could match the same place, prefer the longer, more specific source string. If a term must appear where the fixed translation is grammatically impossible, keep the glossary base and fix the surrounding syntax instead.
+- **Entities that look new.** If the source contains a name, title, place, spell, race, organization, or artifact that has no glossary entry and is translated for the first time in this fragment, choose one deliberate Russian form and use it consistently within the fragment; it will be fixed by section 7.
 
 ## 4. STYLE AND TYPOGRAPHY
 Use literary Russian, not line-by-line calque. Preserve all facts, physical actions, sensory details, emotional nuance, and narrative volume.
@@ -56,5 +67,20 @@ Translate only this current source fragment:
 {text}
 </source_text>
 
-## 7. OUTPUT
-Return only the translated current fragment as raw HTML or the required structured transport payload. No markdown fences, no explanations, no reference chapter text.
+## 7. NEW TERMS AND GLOSSARY GROWTH
+The glossary grows only from the tails the translator writes, so this section is the single intake channel.
+
+After the closing `</html>`, on its own line, add exactly one HTML comment:
+
+<!--NEW_TERMS [{"original":"源字","rus":"Русский-вариант","note":"Род.; что это; Скл."}]-->
+
+Rules:
+- `original` — the source string exactly as it appears in the text; `rus` — the single Russian form you actually used; `note` — tag style, like the `i` field: grammatical gender (`Муж.`/`Жен.`/`Ср.`/`мн.`), what the entity is in two to six words, declension (`Скл.`/`Нескл.`), and any deliberate choice worth locking (e.g. rejected calque).
+- Include only entities missing from `<glossary>`: personal names, nicknames, forms of address, titles and ranks, places, spells and techniques, races and species, organizations and factions, named artifacts and creatures.
+- Exclude ordinary vocabulary, verbs, adjectives, adverbs, generic objects, and one-off descriptive phrases. Exclude anything already covered by `<glossary>`, including partial matches.
+- A term used once but likely to return (a named character, a place, a signature move) belongs here; a passing descriptive phrase does not.
+- Valid JSON array, double quotes, no trailing commas, no text after the comment. If the fragment introduces no new entity, omit the line entirely.
+- The comment never enters the book: it is stripped automatically after the run.
+
+## 8. OUTPUT
+Return only the translated current fragment as raw HTML or the required structured transport payload. No markdown fences, no explanations, no reference chapter text, except the single `NEW_TERMS` comment permitted by section 7.
